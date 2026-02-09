@@ -1,37 +1,63 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Lock, Mail, ArrowRight } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 
 const AdminLogin = () => {
   const navigate = useNavigate();
+  const { user, isAdmin, loading, signIn, signUp } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [mode, setMode] = useState<'login' | 'signup'>('login');
+
+  useEffect(() => {
+    if (!loading && user && isAdmin) {
+      navigate('/admin/dashboard');
+    }
+  }, [user, isAdmin, loading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
 
-    // Simulate login (will be replaced with actual auth)
-    setTimeout(() => {
-      if (email === 'admin@localfinds.com' && password === 'admin123') {
-        navigate('/admin/dashboard');
+    if (mode === 'signup') {
+      const { error } = await signUp(email, password);
+      if (error) {
+        setError(error.message);
       } else {
-        setError('Invalid email or password');
+        // Auto-login after signup
+        const { error: loginError } = await signIn(email, password);
+        if (!loginError) {
+          // Try to promote to admin (only works for first user)
+          try {
+            await supabase.functions.invoke('promote-admin');
+          } catch (e) {
+            // Ignore - may not be first user
+          }
+        } else {
+          setError('Account created! Please sign in.');
+          setMode('login');
+        }
       }
-      setIsLoading(false);
-    }, 1000);
+    } else {
+      const { error } = await signIn(email, password);
+      if (error) {
+        setError(error.message);
+      }
+    }
+    setIsLoading(false);
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
       <div className="w-full max-w-md">
-        {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-accent text-3xl mb-4">
             🏺
@@ -40,7 +66,6 @@ const AdminLogin = () => {
           <p className="text-muted-foreground mt-1">LocalFinds Management System</p>
         </div>
 
-        {/* Login Form */}
         <div className="bg-card rounded-2xl border border-border p-8 shadow-lg">
           <form onSubmit={handleSubmit} className="space-y-6">
             {error && (
@@ -56,7 +81,7 @@ const AdminLogin = () => {
                 <Input
                   id="email"
                   type="email"
-                  placeholder="admin@localfinds.com"
+                  placeholder="admin@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="pl-11"
@@ -77,38 +102,29 @@ const AdminLogin = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   className="pl-11"
                   required
+                  minLength={6}
                 />
               </div>
             </div>
 
-            <Button
-              type="submit"
-              variant="hero"
-              size="lg"
-              className="w-full"
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                'Signing in...'
-              ) : (
-                <>
-                  Sign In
-                  <ArrowRight className="h-5 w-5 ml-2" />
-                </>
+            <Button type="submit" variant="hero" size="lg" className="w-full" disabled={isLoading}>
+              {isLoading ? 'Please wait...' : (
+                <>{mode === 'login' ? 'Sign In' : 'Create Account'}<ArrowRight className="h-5 w-5 ml-2" /></>
               )}
             </Button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-muted-foreground">
-            Demo: admin@localfinds.com / admin123
+          <p className="mt-4 text-center text-sm text-muted-foreground">
+            {mode === 'login' ? (
+              <>No account? <button onClick={() => setMode('signup')} className="text-primary hover:underline">Sign up</button></>
+            ) : (
+              <>Have an account? <button onClick={() => setMode('login')} className="text-primary hover:underline">Sign in</button></>
+            )}
           </p>
         </div>
 
-        {/* Back to Home */}
         <p className="mt-6 text-center text-sm text-muted-foreground">
-          <a href="/" className="text-primary hover:underline">
-            ← Back to Home
-          </a>
+          <a href="/" className="text-primary hover:underline">← Back to Home</a>
         </p>
       </div>
     </div>
