@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, Menu, X, MessageCircle, User, MapPin } from 'lucide-react';
+import { Search, Menu, X, MessageCircle, User, MapPin, ScanLine } from 'lucide-react';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -12,8 +12,8 @@ const Header = () => {
   const navLinks = [
     { path: '/', label: 'Home' },
     { path: '/products', label: 'Products' },
-    { path: '/categories', label: 'Categories' },
-    { path: '/about', label: 'About' },
+    { path: '/scan', label: 'Scan Product' },
+    { path: '/chat', label: 'AI Chat' },
   ];
 
   const isActive = (path: string) => location.pathname === path;

@@ -14,16 +14,174 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      community_submissions: {
+        Row: {
+          created_at: string
+          id: string
+          location: string
+          product_name: string
+          status: string | null
+          submitted_by: string
+          submitted_by_user_id: string | null
+          usage_details: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          location: string
+          product_name: string
+          status?: string | null
+          submitted_by: string
+          submitted_by_user_id?: string | null
+          usage_details?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          location?: string
+          product_name?: string
+          status?: string | null
+          submitted_by?: string
+          submitted_by_user_id?: string | null
+          usage_details?: string | null
+        }
+        Relationships: []
+      }
+      products: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          availability: string | null
+          category_icon: string | null
+          category_id: string
+          category_name: string
+          created_at: string
+          created_by: string | null
+          cultural_background: string | null
+          daily_life_uses: string | null
+          description: string | null
+          featured: boolean | null
+          how_to_use: string | null
+          id: string
+          images: string[] | null
+          importance: string | null
+          ingredients: string | null
+          location_country: string | null
+          location_district: string | null
+          location_local_area: string | null
+          location_state: string | null
+          name: string
+          price: string | null
+          review_comment: string | null
+          review_status: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string | null
+          trending: boolean | null
+          updated_at: string
+          where_to_find: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          availability?: string | null
+          category_icon?: string | null
+          category_id: string
+          category_name: string
+          created_at?: string
+          created_by?: string | null
+          cultural_background?: string | null
+          daily_life_uses?: string | null
+          description?: string | null
+          featured?: boolean | null
+          how_to_use?: string | null
+          id?: string
+          images?: string[] | null
+          importance?: string | null
+          ingredients?: string | null
+          location_country?: string | null
+          location_district?: string | null
+          location_local_area?: string | null
+          location_state?: string | null
+          name: string
+          price?: string | null
+          review_comment?: string | null
+          review_status?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string | null
+          trending?: boolean | null
+          updated_at?: string
+          where_to_find?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          availability?: string | null
+          category_icon?: string | null
+          category_id?: string
+          category_name?: string
+          created_at?: string
+          created_by?: string | null
+          cultural_background?: string | null
+          daily_life_uses?: string | null
+          description?: string | null
+          featured?: boolean | null
+          how_to_use?: string | null
+          id?: string
+          images?: string[] | null
+          importance?: string | null
+          ingredients?: string | null
+          location_country?: string | null
+          location_district?: string | null
+          location_local_area?: string | null
+          location_state?: string | null
+          name?: string
+          price?: string | null
+          review_comment?: string | null
+          review_status?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string | null
+          trending?: boolean | null
+          updated_at?: string
+          where_to_find?: string | null
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +308,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+    },
   },
 } as const
