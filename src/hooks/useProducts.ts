@@ -133,6 +133,16 @@ export function useProducts() {
     return true;
   };
 
+  const updateProduct = async (productId: string, updates: Partial<DbProduct>) => {
+    const { error } = await supabase.from('products').update(updates as any).eq('id', productId);
+    if (error) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      return false;
+    }
+    toast({ title: 'Updated', description: 'Product updated successfully' });
+    return true;
+  };
+
   const deleteProduct = async (productId: string) => {
     const { error } = await supabase.from('products').delete().eq('id', productId);
     if (error) {
@@ -158,6 +168,7 @@ export function useProducts() {
     loading,
     fetchProducts,
     addProduct,
+    updateProduct,
     approveProduct,
     reviewProduct,
     deleteProduct,
