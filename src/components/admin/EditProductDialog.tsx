@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog';
@@ -10,53 +11,64 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { PRODUCT_CATEGORIES } from '@/types/product';
-import ImageUpload from '@/components/admin/ImageUpload';
+import type { DbProduct } from '@/hooks/useProducts';
 
-interface AddProductDialogProps {
+interface EditProductDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (product: any) => Promise<boolean>;
+  product: DbProduct | null;
+  onSubmit: (id: string, updates: Partial<DbProduct>) => Promise<boolean>;
 }
 
-const AddProductDialog = ({ open, onOpenChange, onSubmit }: AddProductDialogProps) => {
+const EditProductDialog = ({ open, onOpenChange, product, onSubmit }: EditProductDialogProps) => {
   const [loading, setLoading] = useState(false);
-  const [images, setImages] = useState<string[]>([]);
   const [form, setForm] = useState({
     name: '', category_id: '', description: '', importance: '',
     daily_life_uses: '', how_to_use: '', ingredients: '', cultural_background: '',
     where_to_find: '', price: '', availability: 'available',
     location_state: '', location_district: '', location_local_area: '',
+    featured: false, trending: false,
   });
+
+  useEffect(() => {
+    if (product) {
+      setForm({
+        name: product.name || '',
+        category_id: product.category_id || '',
+        description: product.description || '',
+        importance: product.importance || '',
+        daily_life_uses: product.daily_life_uses || '',
+        how_to_use: product.how_to_use || '',
+        ingredients: product.ingredients || '',
+        cultural_background: product.cultural_background || '',
+        where_to_find: product.where_to_find || '',
+        price: product.price || '',
+        availability: product.availability || 'available',
+        location_state: product.location_state || '',
+        location_district: product.location_district || '',
+        location_local_area: product.location_local_area || '',
+        featured: product.featured || false,
+        trending: product.trending || false,
+      });
+    }
+  }, [product]);
 
   const selectedCategory = PRODUCT_CATEGORIES.find(c => c.id === form.category_id);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name.trim() || !form.category_id) return;
-
+    if (!product || !form.name.trim()) return;
     setLoading(true);
-    const success = await onSubmit({
+    const success = await onSubmit(product.id, {
       ...form,
-      images,
-      category_name: selectedCategory?.name || '',
-      category_icon: selectedCategory?.icon || '🏺',
-      location_country: 'India',
-    });
+      category_name: selectedCategory?.name || product.category_name,
+      category_icon: selectedCategory?.icon || product.category_icon,
+    } as Partial<DbProduct>);
     setLoading(false);
-
-    if (success) {
-      setForm({
-        name: '', category_id: '', description: '', importance: '',
-        daily_life_uses: '', how_to_use: '', ingredients: '', cultural_background: '',
-        where_to_find: '', price: '', availability: 'available',
-        location_state: '', location_district: '', location_local_area: '',
-      });
-      setImages([]);
-      onOpenChange(false);
-    }
+    if (success) onOpenChange(false);
   };
 
-  const updateField = (field: string, value: string) => {
+  const updateField = (field: string, value: string | boolean) => {
     setForm(prev => ({ ...prev, [field]: value }));
   };
 
@@ -64,14 +76,14 @@ const AddProductDialog = ({ open, onOpenChange, onSubmit }: AddProductDialogProp
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="font-display">Add New Product</DialogTitle>
-          <DialogDescription>Fill in the product details below</DialogDescription>
+          <DialogTitle className="font-display">Edit Product</DialogTitle>
+          <DialogDescription>Update the product details</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid sm:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Product Name *</Label>
-              <Input id="name" value={form.name} onChange={e => updateField('name', e.target.value)} required maxLength={200} />
+              <Label>Product Name *</Label>
+              <Input value={form.name} onChange={e => updateField('name', e.target.value)} required maxLength={200} />
             </div>
             <div className="space-y-2">
               <Label>Category *</Label>
@@ -94,53 +106,53 @@ const AddProductDialog = ({ open, onOpenChange, onSubmit }: AddProductDialogProp
           <div className="grid sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Importance</Label>
-              <Textarea value={form.importance} onChange={e => updateField('importance', e.target.value)} rows={2} maxLength={1000} />
+              <Textarea value={form.importance} onChange={e => updateField('importance', e.target.value)} rows={2} />
             </div>
             <div className="space-y-2">
               <Label>Daily Life Uses</Label>
-              <Textarea value={form.daily_life_uses} onChange={e => updateField('daily_life_uses', e.target.value)} rows={2} maxLength={1000} />
+              <Textarea value={form.daily_life_uses} onChange={e => updateField('daily_life_uses', e.target.value)} rows={2} />
             </div>
           </div>
 
           <div className="grid sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>How to Use</Label>
-              <Textarea value={form.how_to_use} onChange={e => updateField('how_to_use', e.target.value)} rows={2} maxLength={1000} />
+              <Textarea value={form.how_to_use} onChange={e => updateField('how_to_use', e.target.value)} rows={2} />
             </div>
             <div className="space-y-2">
               <Label>Ingredients / Materials</Label>
-              <Textarea value={form.ingredients} onChange={e => updateField('ingredients', e.target.value)} rows={2} maxLength={1000} />
+              <Textarea value={form.ingredients} onChange={e => updateField('ingredients', e.target.value)} rows={2} />
             </div>
           </div>
 
           <div className="space-y-2">
             <Label>Cultural / Historical Background</Label>
-            <Textarea value={form.cultural_background} onChange={e => updateField('cultural_background', e.target.value)} maxLength={2000} />
+            <Textarea value={form.cultural_background} onChange={e => updateField('cultural_background', e.target.value)} />
           </div>
 
           <div className="grid sm:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label>State</Label>
-              <Input value={form.location_state} onChange={e => updateField('location_state', e.target.value)} maxLength={100} />
+              <Input value={form.location_state} onChange={e => updateField('location_state', e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label>District</Label>
-              <Input value={form.location_district} onChange={e => updateField('location_district', e.target.value)} maxLength={100} />
+              <Input value={form.location_district} onChange={e => updateField('location_district', e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label>Local Area</Label>
-              <Input value={form.location_local_area} onChange={e => updateField('location_local_area', e.target.value)} maxLength={100} />
+              <Input value={form.location_local_area} onChange={e => updateField('location_local_area', e.target.value)} />
             </div>
           </div>
 
           <div className="grid sm:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label>Price</Label>
-              <Input value={form.price} onChange={e => updateField('price', e.target.value)} maxLength={100} />
+              <Input value={form.price} onChange={e => updateField('price', e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label>Where to Find</Label>
-              <Input value={form.where_to_find} onChange={e => updateField('where_to_find', e.target.value)} maxLength={500} />
+              <Input value={form.where_to_find} onChange={e => updateField('where_to_find', e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label>Availability</Label>
@@ -156,15 +168,21 @@ const AddProductDialog = ({ open, onOpenChange, onSubmit }: AddProductDialogProp
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label>Product Images</Label>
-            <ImageUpload images={images} onImagesChange={setImages} />
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-2">
+              <Switch checked={form.featured} onCheckedChange={v => updateField('featured', v)} />
+              <Label>Featured</Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch checked={form.trending} onCheckedChange={v => updateField('trending', v)} />
+              <Label>Trending</Label>
+            </div>
           </div>
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button type="submit" variant="hero" disabled={loading || !form.name.trim() || !form.category_id}>
-              {loading ? 'Adding...' : 'Add Product'}
+            <Button type="submit" variant="hero" disabled={loading || !form.name.trim()}>
+              {loading ? 'Saving...' : 'Save Changes'}
             </Button>
           </DialogFooter>
         </form>
@@ -173,4 +191,4 @@ const AddProductDialog = ({ open, onOpenChange, onSubmit }: AddProductDialogProp
   );
 };
 
-export default AddProductDialog;
+export default EditProductDialog;

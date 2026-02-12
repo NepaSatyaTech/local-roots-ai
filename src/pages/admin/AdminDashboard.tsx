@@ -2,13 +2,16 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { useAuth } from '@/hooks/useAuth';
 import { useProducts } from '@/hooks/useProducts';
 import AddProductDialog from '@/components/admin/AddProductDialog';
+import EditProductDialog from '@/components/admin/EditProductDialog';
 import ReviewDialog from '@/components/admin/ReviewDialog';
+import type { DbProduct } from '@/hooks/useProducts';
 import {
-  Package, Users, MessageCircle, TrendingUp, Plus, Edit, Trash2,
-  Eye, LogOut, Menu, X, CheckCircle, Clock, BarChart3, Settings, Bell,
+  Package, TrendingUp, Plus, Edit, Trash2, Eye, LogOut, Menu, X,
+  CheckCircle, Clock, BarChart3, Settings, Bell, Search, Image,
 } from 'lucide-react';
 
 const AdminDashboard = () => {
@@ -16,19 +19,20 @@ const AdminDashboard = () => {
   const { user, isAdmin, loading: authLoading, signOut } = useAuth();
   const {
     products, recentProducts, pendingProducts, approvedCount, reviewedCount,
-    loading: productsLoading, addProduct, approveProduct, reviewProduct, deleteProduct,
+    loading: productsLoading, addProduct, updateProduct, approveProduct, reviewProduct, deleteProduct,
   } = useProducts();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<DbProduct | null>(null);
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
   const [reviewingProduct, setReviewingProduct] = useState<{ id: string; name: string; comment?: string } | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    if (!authLoading && (!user || !isAdmin)) {
-      navigate('/admin');
-    }
+    if (!authLoading && (!user || !isAdmin)) navigate('/admin');
   }, [user, isAdmin, authLoading, navigate]);
 
   if (authLoading || productsLoading) {
@@ -43,28 +47,290 @@ const AdminDashboard = () => {
   }
 
   const stats = [
-    { label: 'Total Products', value: products.length, icon: Package, change: `${approvedCount} approved`, color: 'primary' },
-    { label: 'Pending Approvals', value: pendingProducts.length, icon: Clock, change: `${pendingProducts.length} new`, color: 'amber' },
-    { label: 'Reviewed Products', value: reviewedCount, icon: CheckCircle, change: `${reviewedCount} total`, color: 'sage' },
-    { label: 'Approved Products', value: approvedCount, icon: TrendingUp, change: `${Math.round((approvedCount / Math.max(products.length, 1)) * 100)}%`, color: 'terracotta' },
+    { label: 'Total Products', value: products.length, icon: Package, change: `${approvedCount} approved` },
+    { label: 'Pending Approvals', value: pendingProducts.length, icon: Clock, change: `${pendingProducts.length} new` },
+    { label: 'Reviewed Products', value: reviewedCount, icon: CheckCircle, change: `${reviewedCount} total` },
+    { label: 'Approved Products', value: approvedCount, icon: TrendingUp, change: `${Math.round((approvedCount / Math.max(products.length, 1)) * 100)}%` },
   ];
 
   const navItems = [
     { id: 'overview', label: 'Overview', icon: BarChart3 },
-    { id: 'products', label: 'Products', icon: Package },
+    { id: 'products', label: 'All Products', icon: Package },
     { id: 'approvals', label: 'Approvals', icon: CheckCircle },
     { id: 'analytics', label: 'Analytics', icon: TrendingUp },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
-  const handleLogout = async () => {
-    await signOut();
-    navigate('/admin');
-  };
+  const handleLogout = async () => { await signOut(); navigate('/admin'); };
 
   const openReview = (product: { id: string; name: string; review_comment?: string | null }) => {
     setReviewingProduct({ id: product.id, name: product.name, comment: product.review_comment || '' });
     setReviewDialogOpen(true);
+  };
+
+  const openEdit = (product: DbProduct) => {
+    setEditingProduct(product);
+    setEditDialogOpen(true);
+  };
+
+  const filteredProducts = products.filter(p =>
+    !searchQuery || p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    p.category_name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const renderContent = () => {
+    if (activeTab === 'products') {
+      return (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <h2 className="font-display text-xl font-bold text-foreground">All Products</h2>
+            <div className="flex items-center gap-3">
+              <div className="relative flex-1 sm:w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input placeholder="Search products..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10" />
+              </div>
+              <Button variant="hero" onClick={() => setAddDialogOpen(true)}><Plus className="h-4 w-4 mr-2" />Add</Button>
+            </div>
+          </div>
+          <div className="rounded-2xl bg-card border border-border overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-muted/50">
+                    <th className="text-left p-4 font-medium text-muted-foreground">Product</th>
+                    <th className="text-left p-4 font-medium text-muted-foreground hidden md:table-cell">Category</th>
+                    <th className="text-left p-4 font-medium text-muted-foreground hidden lg:table-cell">Location</th>
+                    <th className="text-left p-4 font-medium text-muted-foreground">Status</th>
+                    <th className="text-left p-4 font-medium text-muted-foreground">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredProducts.map(product => (
+                    <tr key={product.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
+                      <td className="p-4">
+                        <div className="flex items-center gap-3">
+                          {product.images && product.images.length > 0 ? (
+                            <img src={product.images[0]} alt="" className="w-10 h-10 rounded-lg object-cover" />
+                          ) : (
+                            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-lg">{product.category_icon}</div>
+                          )}
+                          <div>
+                            <p className="font-medium text-foreground">{product.name}</p>
+                            <p className="text-xs text-muted-foreground">{product.price || 'No price'}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-4 hidden md:table-cell text-muted-foreground">{product.category_icon} {product.category_name}</td>
+                      <td className="p-4 hidden lg:table-cell text-muted-foreground">{product.location_state}{product.location_district ? `, ${product.location_district}` : ''}</td>
+                      <td className="p-4">
+                        <Badge variant={product.review_status === 'approved' ? 'default' : product.review_status === 'rejected' ? 'destructive' : 'secondary'} className="text-xs">
+                          {product.review_status}
+                        </Badge>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(product)}><Edit className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openReview(product)}><Eye className="h-4 w-4" /></Button>
+                          {product.review_status !== 'approved' && (
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-sage" onClick={() => approveProduct(product.id)}>
+                              <CheckCircle className="h-4 w-4" />
+                            </Button>
+                          )}
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => deleteProduct(product.id)}><Trash2 className="h-4 w-4" /></Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {filteredProducts.length === 0 && (
+                <div className="p-8 text-center text-muted-foreground">No products found</div>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (activeTab === 'approvals') {
+      return (
+        <div className="space-y-6">
+          <h2 className="font-display text-xl font-bold text-foreground">Pending Approvals</h2>
+          {pendingProducts.length === 0 ? (
+            <div className="rounded-2xl bg-card border border-border p-12 text-center">
+              <div className="text-5xl mb-4">🎉</div>
+              <h3 className="font-display text-lg font-semibold text-foreground mb-2">All caught up!</h3>
+              <p className="text-muted-foreground">No products pending approval</p>
+            </div>
+          ) : (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {pendingProducts.map(product => (
+                <div key={product.id} className="rounded-2xl bg-card border border-border p-5">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      {product.images && product.images.length > 0 ? (
+                        <img src={product.images[0]} alt="" className="w-12 h-12 rounded-lg object-cover" />
+                      ) : (
+                        <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center text-2xl">{product.category_icon}</div>
+                      )}
+                      <div>
+                        <p className="font-medium text-foreground">{product.name}</p>
+                        <p className="text-sm text-muted-foreground">{product.category_name}</p>
+                      </div>
+                    </div>
+                  </div>
+                  {product.description && <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{product.description}</p>}
+                  <p className="text-xs text-muted-foreground mb-3">{product.location_state}{product.location_district ? `, ${product.location_district}` : ''} • {new Date(product.created_at).toLocaleDateString()}</p>
+                  <div className="flex gap-2">
+                    <Button variant="sage" size="sm" className="flex-1" onClick={() => approveProduct(product.id)}>
+                      <CheckCircle className="h-4 w-4 mr-1" />Approve
+                    </Button>
+                    <Button variant="outline" size="sm" className="flex-1" onClick={() => openReview(product)}>Review</Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    if (activeTab === 'analytics') {
+      const categoryBreakdown = products.reduce((acc, p) => {
+        acc[p.category_name] = (acc[p.category_name] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
+      return (
+        <div className="space-y-6">
+          <h2 className="font-display text-xl font-bold text-foreground">Analytics</h2>
+          <div className="grid sm:grid-cols-2 gap-6">
+            <div className="rounded-2xl bg-card border border-border p-6">
+              <h3 className="font-display font-semibold text-foreground mb-4">Status Breakdown</h3>
+              <div className="space-y-3">
+                {[
+                  { label: 'Approved', count: approvedCount, color: 'bg-sage' },
+                  { label: 'Pending', count: pendingProducts.length, color: 'bg-amber' },
+                  { label: 'Rejected', count: products.filter(p => p.review_status === 'rejected').length, color: 'bg-destructive' },
+                  { label: 'Needs Changes', count: products.filter(p => p.review_status === 'needs_changes').length, color: 'bg-primary' },
+                ].map(item => (
+                  <div key={item.label} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-3 h-3 rounded-full ${item.color}`} />
+                      <span className="text-sm text-muted-foreground">{item.label}</span>
+                    </div>
+                    <span className="font-semibold text-foreground">{item.count}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="rounded-2xl bg-card border border-border p-6">
+              <h3 className="font-display font-semibold text-foreground mb-4">Category Breakdown</h3>
+              <div className="space-y-3">
+                {Object.entries(categoryBreakdown).map(([cat, count]) => (
+                  <div key={cat} className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">{cat}</span>
+                    <span className="font-semibold text-foreground">{count}</span>
+                  </div>
+                ))}
+                {Object.keys(categoryBreakdown).length === 0 && (
+                  <p className="text-sm text-muted-foreground">No data yet</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Overview (default)
+    return (
+      <>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          {stats.map((stat) => (
+            <div key={stat.label} className="p-6 rounded-2xl bg-card border border-border">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <stat.icon className="h-6 w-6 text-primary" />
+                </div>
+                <Badge variant="secondary" className="text-xs">{stat.change}</Badge>
+              </div>
+              <div className="text-2xl font-bold text-foreground mb-1">{stat.value}</div>
+              <div className="text-sm text-muted-foreground">{stat.label}</div>
+            </div>
+          ))}
+        </div>
+
+        <div className="grid lg:grid-cols-2 gap-8">
+          {/* Recent Products */}
+          <div className="rounded-2xl bg-card border border-border p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="font-display text-lg font-semibold text-foreground">Recent Products</h2>
+              <Badge variant="secondary">{recentProducts.length} latest</Badge>
+            </div>
+            <div className="space-y-4">
+              {recentProducts.length === 0 ? (
+                <p className="text-muted-foreground text-sm text-center py-4">No products yet. Add your first product!</p>
+              ) : (
+                recentProducts.map((product) => (
+                  <div key={product.id} className="flex items-center gap-4 p-3 rounded-xl hover:bg-muted transition-colors">
+                    {product.images && product.images.length > 0 ? (
+                      <img src={product.images[0]} alt="" className="w-10 h-10 rounded-lg object-cover" />
+                    ) : (
+                      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-lg">{product.category_icon}</div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-foreground truncate">{product.name}</p>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground">{product.category_name}</span>
+                        <Badge variant={product.review_status === 'approved' ? 'default' : product.review_status === 'rejected' ? 'destructive' : 'secondary'} className="text-xs">
+                          {product.review_status}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(product)}><Edit className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => deleteProduct(product.id)}><Trash2 className="h-4 w-4" /></Button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Pending Approvals */}
+          <div className="rounded-2xl bg-card border border-border p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="font-display text-lg font-semibold text-foreground">Pending Approvals</h2>
+              <Badge variant="outline">{pendingProducts.length} pending</Badge>
+            </div>
+            <div className="space-y-4">
+              {pendingProducts.length === 0 ? (
+                <p className="text-muted-foreground text-sm text-center py-4">No pending approvals 🎉</p>
+              ) : (
+                pendingProducts.slice(0, 5).map((product) => (
+                  <div key={product.id} className="p-4 rounded-xl border border-border hover:border-primary/30 transition-colors">
+                    <div className="flex items-start justify-between mb-2">
+                      <div>
+                        <p className="font-medium text-foreground">{product.name}</p>
+                        <p className="text-sm text-muted-foreground">{product.location_state}{product.location_district ? `, ${product.location_district}` : ''}</p>
+                      </div>
+                      <p className="text-xs text-muted-foreground">{new Date(product.created_at).toLocaleDateString()}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="sage" size="sm" className="flex-1" onClick={() => approveProduct(product.id)}>
+                        <CheckCircle className="h-4 w-4 mr-1" />Approve
+                      </Button>
+                      <Button variant="outline" size="sm" className="flex-1" onClick={() => openReview(product)}>Review</Button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      </>
+    );
   };
 
   return (
@@ -122,7 +388,9 @@ const AdminDashboard = () => {
         <main className="flex-1 min-h-screen p-4 md:p-8">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
             <div>
-              <h1 className="font-display text-2xl md:text-3xl font-bold text-foreground">Dashboard</h1>
+              <h1 className="font-display text-2xl md:text-3xl font-bold text-foreground">
+                {navItems.find(n => n.id === activeTab)?.label || 'Dashboard'}
+              </h1>
               <p className="text-muted-foreground">Welcome back! Here's what's happening today.</p>
             </div>
             <div className="flex items-center gap-2">
@@ -133,94 +401,13 @@ const AdminDashboard = () => {
             </div>
           </div>
 
-          {/* Stats Grid */}
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            {stats.map((stat) => (
-              <div key={stat.label} className="p-6 rounded-2xl bg-card border border-border">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                    <stat.icon className="h-6 w-6 text-primary" />
-                  </div>
-                  <Badge variant="secondary" className="text-xs">{stat.change}</Badge>
-                </div>
-                <div className="text-2xl font-bold text-foreground mb-1">{stat.value}</div>
-                <div className="text-sm text-muted-foreground">{stat.label}</div>
-              </div>
-            ))}
-          </div>
-
-          <div className="grid lg:grid-cols-2 gap-8">
-            {/* Recent Products */}
-            <div className="rounded-2xl bg-card border border-border p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="font-display text-lg font-semibold text-foreground">Recent Products</h2>
-                <Badge variant="secondary">{recentProducts.length} latest</Badge>
-              </div>
-              <div className="space-y-4">
-                {recentProducts.length === 0 ? (
-                  <p className="text-muted-foreground text-sm text-center py-4">No products yet. Add your first product!</p>
-                ) : (
-                  recentProducts.map((product) => (
-                    <div key={product.id} className="flex items-center gap-4 p-3 rounded-xl hover:bg-muted transition-colors">
-                      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-lg">{product.category_icon}</div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-foreground truncate">{product.name}</p>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm text-muted-foreground">{product.category_name}</span>
-                          <Badge variant={product.review_status === 'approved' ? 'default' : product.review_status === 'rejected' ? 'destructive' : 'secondary'} className="text-xs">
-                            {product.review_status}
-                          </Badge>
-                        </div>
-                      </div>
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openReview(product)}><Edit className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => deleteProduct(product.id)}><Trash2 className="h-4 w-4" /></Button>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-
-            {/* Pending Approvals */}
-            <div className="rounded-2xl bg-card border border-border p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="font-display text-lg font-semibold text-foreground">Pending Approvals</h2>
-                <Badge variant="outline">{pendingProducts.length} pending</Badge>
-              </div>
-              <div className="space-y-4">
-                {pendingProducts.length === 0 ? (
-                  <p className="text-muted-foreground text-sm text-center py-4">No pending approvals 🎉</p>
-                ) : (
-                  pendingProducts.map((product) => (
-                    <div key={product.id} className="p-4 rounded-xl border border-border hover:border-primary/30 transition-colors">
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <p className="font-medium text-foreground">{product.name}</p>
-                          <p className="text-sm text-muted-foreground">{product.location_state}{product.location_district ? `, ${product.location_district}` : ''}</p>
-                        </div>
-                        <p className="text-xs text-muted-foreground">{new Date(product.created_at).toLocaleDateString()}</p>
-                      </div>
-                      <p className="text-sm text-muted-foreground mb-3">{product.category_icon} {product.category_name}</p>
-                      <div className="flex gap-2">
-                        <Button variant="sage" size="sm" className="flex-1" onClick={() => approveProduct(product.id)}>
-                          <CheckCircle className="h-4 w-4 mr-1" />Approve
-                        </Button>
-                        <Button variant="outline" size="sm" className="flex-1" onClick={() => openReview(product)}>
-                          Review
-                        </Button>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
+          {renderContent()}
         </main>
       </div>
 
       {/* Dialogs */}
       <AddProductDialog open={addDialogOpen} onOpenChange={setAddDialogOpen} onSubmit={addProduct} />
+      <EditProductDialog open={editDialogOpen} onOpenChange={setEditDialogOpen} product={editingProduct} onSubmit={updateProduct} />
       {reviewingProduct && (
         <ReviewDialog
           open={reviewDialogOpen}

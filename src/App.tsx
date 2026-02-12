@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
+import CategoryPage from "./pages/CategoryPage";
 import Chat from "./pages/Chat";
 import Scan from "./pages/Scan";
 import AdminLogin from "./pages/admin/AdminLogin";
@@ -24,6 +25,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/products" element={<Products />} />
           <Route path="/product/:id" element={<ProductDetail />} />
+          <Route path="/category/:categoryId" element={<CategoryPage />} />
           <Route path="/chat" element={<Chat />} />
           <Route path="/scan" element={<Scan />} />
           <Route path="/admin" element={<AdminLogin />} />
