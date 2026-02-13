@@ -15,6 +15,7 @@ const AdminLogin = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [mode, setMode] = useState<'login' | 'signup'>('login');
+  const [signupSuccess, setSignupSuccess] = useState(false);
 
   useEffect(() => {
     if (!loading && user && isAdmin) {
@@ -32,24 +33,22 @@ const AdminLogin = () => {
       if (error) {
         setError(error.message);
       } else {
-        // Auto-login after signup
-        const { error: loginError } = await signIn(email, password);
-        if (!loginError) {
-          // Try to promote to admin (only works for first user)
-          try {
-            await supabase.functions.invoke('promote-admin');
-          } catch (e) {
-            // Ignore - may not be first user
-          }
-        } else {
-          setError('Account created! Please sign in.');
-          setMode('login');
-        }
+        setError('');
+        setMode('login');
+        // Show success message
+        setSignupSuccess(true);
       }
     } else {
       const { error } = await signIn(email, password);
       if (error) {
         setError(error.message);
+      } else {
+        // Try to promote to admin (only works for first user)
+        try {
+          await supabase.functions.invoke('promote-admin');
+        } catch {
+          // Ignore - may not be first user
+        }
       }
     }
     setIsLoading(false);
@@ -71,6 +70,11 @@ const AdminLogin = () => {
             {error && (
               <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
                 {error}
+              </div>
+            )}
+            {signupSuccess && (
+              <div className="p-3 rounded-lg bg-primary/10 border border-primary/20 text-primary text-sm">
+                Account created! Please check your email to confirm, then sign in.
               </div>
             )}
 
