@@ -9,9 +9,10 @@ import AddProductDialog from '@/components/admin/AddProductDialog';
 import EditProductDialog from '@/components/admin/EditProductDialog';
 import ReviewDialog from '@/components/admin/ReviewDialog';
 import type { DbProduct } from '@/hooks/useProducts';
+import { useSubmissions } from '@/hooks/useSubmissions';
 import {
   Package, TrendingUp, Plus, Edit, Trash2, Eye, LogOut, Menu, X,
-  CheckCircle, Clock, BarChart3, Settings, Bell, Search, Image,
+  CheckCircle, Clock, BarChart3, Settings, Bell, Search, Image, Users, MessageSquare,
 } from 'lucide-react';
 
 const AdminDashboard = () => {
@@ -21,6 +22,7 @@ const AdminDashboard = () => {
     products, recentProducts, pendingProducts, approvedCount, reviewedCount,
     loading: productsLoading, addProduct, updateProduct, approveProduct, reviewProduct, deleteProduct,
   } = useProducts();
+  const { submissions, pendingSubmissions, loading: submissionsLoading, updateStatus, deleteSubmission } = useSubmissions();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
@@ -35,7 +37,7 @@ const AdminDashboard = () => {
     if (!authLoading && (!user || !isAdmin)) navigate('/admin');
   }, [user, isAdmin, authLoading, navigate]);
 
-  if (authLoading || productsLoading) {
+  if (authLoading || productsLoading || submissionsLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-muted/30">
         <div className="text-center">
@@ -57,6 +59,7 @@ const AdminDashboard = () => {
     { id: 'overview', label: 'Overview', icon: BarChart3 },
     { id: 'products', label: 'All Products', icon: Package },
     { id: 'approvals', label: 'Approvals', icon: CheckCircle },
+    { id: 'submissions', label: 'Submissions', icon: MessageSquare },
     { id: 'analytics', label: 'Analytics', icon: TrendingUp },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
@@ -189,6 +192,76 @@ const AdminDashboard = () => {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    if (activeTab === 'submissions') {
+      return (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <h2 className="font-display text-xl font-bold text-foreground">Community Submissions</h2>
+            <Badge variant="secondary">{pendingSubmissions.length} pending</Badge>
+          </div>
+          {submissions.length === 0 ? (
+            <div className="rounded-2xl bg-card border border-border p-12 text-center">
+              <div className="text-5xl mb-4">📬</div>
+              <h3 className="font-display text-lg font-semibold text-foreground mb-2">No submissions yet</h3>
+              <p className="text-muted-foreground">Community product suggestions will appear here</p>
+            </div>
+          ) : (
+            <div className="rounded-2xl bg-card border border-border overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border bg-muted/50">
+                      <th className="text-left p-4 font-medium text-muted-foreground">Product Name</th>
+                      <th className="text-left p-4 font-medium text-muted-foreground hidden md:table-cell">Location</th>
+                      <th className="text-left p-4 font-medium text-muted-foreground hidden lg:table-cell">Details</th>
+                      <th className="text-left p-4 font-medium text-muted-foreground hidden md:table-cell">Submitted By</th>
+                      <th className="text-left p-4 font-medium text-muted-foreground">Status</th>
+                      <th className="text-left p-4 font-medium text-muted-foreground">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {submissions.map(sub => (
+                      <tr key={sub.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
+                        <td className="p-4">
+                          <p className="font-medium text-foreground">{sub.product_name}</p>
+                          <p className="text-xs text-muted-foreground">{new Date(sub.created_at).toLocaleDateString()}</p>
+                        </td>
+                        <td className="p-4 hidden md:table-cell text-muted-foreground">{sub.location}</td>
+                        <td className="p-4 hidden lg:table-cell text-muted-foreground max-w-xs truncate">{sub.usage_details || '—'}</td>
+                        <td className="p-4 hidden md:table-cell text-muted-foreground">{sub.submitted_by}</td>
+                        <td className="p-4">
+                          <Badge variant={sub.status === 'approved' ? 'default' : sub.status === 'rejected' ? 'destructive' : 'secondary'} className="text-xs">
+                            {sub.status || 'pending'}
+                          </Badge>
+                        </td>
+                        <td className="p-4">
+                          <div className="flex gap-1">
+                            {sub.status !== 'approved' && (
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-sage" onClick={() => updateStatus(sub.id, 'approved')}>
+                                <CheckCircle className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {sub.status !== 'rejected' && (
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-amber" onClick={() => updateStatus(sub.id, 'rejected')}>
+                                <X className="h-4 w-4" />
+                              </Button>
+                            )}
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => deleteSubmission(sub.id)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </div>
