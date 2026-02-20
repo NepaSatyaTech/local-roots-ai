@@ -43,12 +43,8 @@ const AdminLogin = () => {
       if (error) {
         setError(error.message);
       } else {
-        // Try to promote to admin (only works for first user)
-        try {
-          await supabase.functions.invoke('promote-admin');
-        } catch {
-          // Ignore - may not be first user
-        }
+        // Try to promote to admin in background (only works for first user)
+        supabase.functions.invoke('promote-admin').catch(() => {});
       }
     }
     setIsLoading(false);
