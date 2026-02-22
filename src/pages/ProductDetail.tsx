@@ -1,10 +1,11 @@
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import ChatWidget from '@/components/chat/ChatWidget';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { mockProducts } from '@/data/mockProducts';
+import { useAuth } from '@/hooks/useAuth';
 import {
   ArrowLeft,
   MapPin,
@@ -17,10 +18,13 @@ import {
   BookOpen,
   History,
   ShoppingBag,
+  Lock,
 } from 'lucide-react';
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const product = mockProducts.find((p) => p.id === id);
 
   if (!product) {
@@ -235,30 +239,49 @@ const ProductDetail = () => {
             </div>
           </div>
 
-          {/* Detailed Information */}
-          <div className="mt-12 space-y-6">
-            <h2 className="font-display text-2xl font-bold text-foreground">
-              Product Details
-            </h2>
-            <div className="grid md:grid-cols-2 gap-6">
-              {infoSections.map((section) => (
-                <div
-                  key={section.title}
-                  className="p-6 rounded-xl bg-card border border-border"
-                >
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <section.icon className="h-5 w-5 text-primary" />
+          {/* Detailed Information - gated */}
+          {user ? (
+            <div className="mt-12 space-y-6">
+              <h2 className="font-display text-2xl font-bold text-foreground">
+                Product Details
+              </h2>
+              <div className="grid md:grid-cols-2 gap-6">
+                {infoSections.map((section) => (
+                  <div
+                    key={section.title}
+                    className="p-6 rounded-xl bg-card border border-border"
+                  >
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <section.icon className="h-5 w-5 text-primary" />
+                      </div>
+                      <h3 className="font-display font-semibold text-foreground">
+                        {section.title}
+                      </h3>
                     </div>
-                    <h3 className="font-display font-semibold text-foreground">
-                      {section.title}
-                    </h3>
+                    <p className="text-muted-foreground leading-relaxed">{section.content}</p>
                   </div>
-                  <p className="text-muted-foreground leading-relaxed">{section.content}</p>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="mt-12 p-8 rounded-2xl bg-muted/50 border border-border text-center">
+              <Lock className="h-10 w-10 text-muted-foreground mx-auto mb-4" />
+              <h2 className="font-display text-xl font-bold text-foreground mb-2">
+                Verify to See Full Details
+              </h2>
+              <p className="text-muted-foreground mb-4">
+                Product details like ingredients, cultural background, and usage info are available after email verification.
+              </p>
+              <Button
+                variant="hero"
+                size="lg"
+                onClick={() => navigate(`/verify?redirect=/product/${id}`)}
+              >
+                Verify Now
+              </Button>
+            </div>
+          )}
         </div>
       </main>
       <Footer />
