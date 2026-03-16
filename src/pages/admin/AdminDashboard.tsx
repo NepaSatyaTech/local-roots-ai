@@ -26,6 +26,7 @@ const AdminDashboard = () => {
     loading: productsLoading, addProduct, updateProduct, approveProduct, reviewProduct, deleteProduct,
   } = useProducts();
   const { submissions, pendingSubmissions, loading: submissionsLoading, updateStatus, deleteSubmission } = useSubmissions();
+  const { categories, loading: categoriesLoading, addCategory, updateCategory, deleteCategory } = useCategories();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
