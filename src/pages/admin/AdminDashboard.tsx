@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -15,11 +15,46 @@ import type { DbCategory } from '@/hooks/useCategories';
 import CategoryDialog from '@/components/admin/CategoryDialog';
 import {
   Package, TrendingUp, Plus, Edit, Trash2, Eye, LogOut, Menu, X,
-  CheckCircle, Clock, BarChart3, Settings, Bell, Search, Image, Users, MessageSquare, FolderOpen,
+  CheckCircle, Clock, BarChart3, Settings, Bell, Search, Image, Users, MessageSquare, FolderOpen, GripVertical,
 } from 'lucide-react';
+import {
+  DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
+// Sortable category card component
+const SortableCategoryCard = ({ category, onEdit, onDelete }: { category: DbCategory; onEdit: () => void; onDelete: () => void }) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: category.id });
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
+
+  return (
+    <div ref={setNodeRef} style={style} className="rounded-2xl bg-card border border-border p-4 flex items-center gap-4">
+      <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground touch-none">
+        <GripVertical className="h-5 w-5" />
+      </button>
+      <div className="text-2xl">{category.icon}</div>
+      <div className="flex-1 min-w-0">
+        <p className="font-medium text-foreground">{category.name}</p>
+        <p className="text-sm text-muted-foreground truncate">{category.description}</p>
+      </div>
+      <Badge variant="secondary" className="text-xs hidden sm:inline-flex">{category.color}</Badge>
+      <div className="flex gap-1">
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onEdit}><Edit className="h-4 w-4" /></Button>
+        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={onDelete}><Trash2 className="h-4 w-4" /></Button>
+      </div>
+    </div>
+  );
+};
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
   const { user, isAdmin, loading: authLoading, signOut } = useAuth();
   const {
     products, recentProducts, pendingProducts, approvedCount, reviewedCount,
@@ -163,6 +198,20 @@ const AdminDashboard = () => {
     }
 
     if (activeTab === 'categories') {
+      const handleDragEnd = async (event: DragEndEvent) => {
+        const { active, over } = event;
+        if (!over || active.id === over.id) return;
+        const oldIndex = categories.findIndex(c => c.id === active.id);
+        const newIndex = categories.findIndex(c => c.id === over.id);
+        const reordered = arrayMove(categories, oldIndex, newIndex);
+        // Update sort_order for all reordered items
+        for (let i = 0; i < reordered.length; i++) {
+          if (reordered[i].sort_order !== i + 1) {
+            await updateCategory(reordered[i].id, { sort_order: i + 1 });
+          }
+        }
+      };
+
       return (
         <div className="space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -171,38 +220,28 @@ const AdminDashboard = () => {
               <Plus className="h-4 w-4 mr-2" />Add Category
             </Button>
           </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {categories.map(cat => (
-              <div key={cat.id} className="rounded-2xl bg-card border border-border p-5 flex flex-col">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="text-3xl">{cat.icon}</div>
-                    <div>
-                      <p className="font-medium text-foreground">{cat.name}</p>
-                      <p className="text-xs text-muted-foreground">Order: {cat.sort_order}</p>
-                    </div>
-                  </div>
-                  <Badge variant="secondary" className="text-xs">{cat.color}</Badge>
-                </div>
-                <p className="text-sm text-muted-foreground mb-4 flex-1">{cat.description}</p>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" className="flex-1" onClick={() => { setEditingCategory(cat); setCategoryDialogOpen(true); }}>
-                    <Edit className="h-4 w-4 mr-1" />Edit
-                  </Button>
-                  <Button variant="ghost" size="sm" className="text-destructive" onClick={() => deleteCategory(cat.id)}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
+          <p className="text-sm text-muted-foreground">Drag categories to reorder them.</p>
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={categories.map(c => c.id)} strategy={verticalListSortingStrategy}>
+              <div className="space-y-3">
+                {categories.map(cat => (
+                  <SortableCategoryCard
+                    key={cat.id}
+                    category={cat}
+                    onEdit={() => { setEditingCategory(cat); setCategoryDialogOpen(true); }}
+                    onDelete={() => deleteCategory(cat.id)}
+                  />
+                ))}
               </div>
-            ))}
-            {categories.length === 0 && (
-              <div className="col-span-full rounded-2xl bg-card border border-border p-12 text-center">
-                <div className="text-5xl mb-4">📂</div>
-                <h3 className="font-display text-lg font-semibold text-foreground mb-2">No categories yet</h3>
-                <p className="text-muted-foreground">Create your first category to organize products</p>
-              </div>
-            )}
-          </div>
+            </SortableContext>
+          </DndContext>
+          {categories.length === 0 && (
+            <div className="rounded-2xl bg-card border border-border p-12 text-center">
+              <div className="text-5xl mb-4">📂</div>
+              <h3 className="font-display text-lg font-semibold text-foreground mb-2">No categories yet</h3>
+              <p className="text-muted-foreground">Create your first category to organize products</p>
+            </div>
+          )}
         </div>
       );
     }

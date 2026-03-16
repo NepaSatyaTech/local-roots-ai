@@ -9,7 +9,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { PRODUCT_CATEGORIES } from '@/types/product';
+import { useCategories } from '@/hooks/useCategories';
 import ImageUpload from '@/components/admin/ImageUpload';
 
 interface AddProductDialogProps {
@@ -19,6 +19,7 @@ interface AddProductDialogProps {
 }
 
 const AddProductDialog = ({ open, onOpenChange, onSubmit }: AddProductDialogProps) => {
+  const { categories } = useCategories();
   const [loading, setLoading] = useState(false);
   const [images, setImages] = useState<string[]>([]);
   const [form, setForm] = useState({
@@ -28,7 +29,7 @@ const AddProductDialog = ({ open, onOpenChange, onSubmit }: AddProductDialogProp
     location_state: '', location_district: '', location_local_area: '',
   });
 
-  const selectedCategory = PRODUCT_CATEGORIES.find(c => c.id === form.category_id);
+  const selectedCategory = categories.find(c => c.id === form.category_id);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,7 +79,7 @@ const AddProductDialog = ({ open, onOpenChange, onSubmit }: AddProductDialogProp
               <Select value={form.category_id} onValueChange={v => updateField('category_id', v)}>
                 <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
                 <SelectContent>
-                  {PRODUCT_CATEGORIES.map(c => (
+                  {categories.map(c => (
                     <SelectItem key={c.id} value={c.id}>{c.icon} {c.name}</SelectItem>
                   ))}
                 </SelectContent>

@@ -10,7 +10,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { PRODUCT_CATEGORIES } from '@/types/product';
+import { useCategories } from '@/hooks/useCategories';
 import type { DbProduct } from '@/hooks/useProducts';
 
 interface EditProductDialogProps {
@@ -21,6 +21,7 @@ interface EditProductDialogProps {
 }
 
 const EditProductDialog = ({ open, onOpenChange, product, onSubmit }: EditProductDialogProps) => {
+  const { categories } = useCategories();
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     name: '', category_id: '', description: '', importance: '',
@@ -53,7 +54,7 @@ const EditProductDialog = ({ open, onOpenChange, product, onSubmit }: EditProduc
     }
   }, [product]);
 
-  const selectedCategory = PRODUCT_CATEGORIES.find(c => c.id === form.category_id);
+  const selectedCategory = categories.find(c => c.id === form.category_id);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,7 +91,7 @@ const EditProductDialog = ({ open, onOpenChange, product, onSubmit }: EditProduc
               <Select value={form.category_id} onValueChange={v => updateField('category_id', v)}>
                 <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
                 <SelectContent>
-                  {PRODUCT_CATEGORIES.map(c => (
+                  {categories.map(c => (
                     <SelectItem key={c.id} value={c.id}>{c.icon} {c.name}</SelectItem>
                   ))}
                 </SelectContent>
