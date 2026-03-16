@@ -64,6 +64,7 @@ const AdminDashboard = () => {
   const navItems = [
     { id: 'overview', label: 'Overview', icon: BarChart3 },
     { id: 'products', label: 'All Products', icon: Package },
+    { id: 'categories', label: 'Categories', icon: FolderOpen },
     { id: 'approvals', label: 'Approvals', icon: CheckCircle },
     { id: 'submissions', label: 'Submissions', icon: MessageSquare },
     { id: 'analytics', label: 'Analytics', icon: TrendingUp },
