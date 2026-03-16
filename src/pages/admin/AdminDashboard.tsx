@@ -542,6 +542,15 @@ const AdminDashboard = () => {
           onSubmit={(status, comment) => reviewProduct(reviewingProduct.id, status, comment)}
         />
       )}
+      <CategoryDialog
+        open={categoryDialogOpen}
+        onOpenChange={setCategoryDialogOpen}
+        category={editingCategory}
+        onSubmit={async (data) => {
+          if (editingCategory) return updateCategory(editingCategory.id, data);
+          return addCategory(data);
+        }}
+      />
     </div>
   );
 };
