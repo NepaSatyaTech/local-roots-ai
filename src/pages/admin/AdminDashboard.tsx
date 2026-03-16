@@ -35,6 +35,8 @@ const AdminDashboard = () => {
   const [editingProduct, setEditingProduct] = useState<DbProduct | null>(null);
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
   const [reviewingProduct, setReviewingProduct] = useState<{ id: string; name: string; comment?: string } | null>(null);
+  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<DbCategory | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
