@@ -10,9 +10,12 @@ import EditProductDialog from '@/components/admin/EditProductDialog';
 import ReviewDialog from '@/components/admin/ReviewDialog';
 import type { DbProduct } from '@/hooks/useProducts';
 import { useSubmissions } from '@/hooks/useSubmissions';
+import { useCategories } from '@/hooks/useCategories';
+import type { DbCategory } from '@/hooks/useCategories';
+import CategoryDialog from '@/components/admin/CategoryDialog';
 import {
   Package, TrendingUp, Plus, Edit, Trash2, Eye, LogOut, Menu, X,
-  CheckCircle, Clock, BarChart3, Settings, Bell, Search, Image, Users, MessageSquare,
+  CheckCircle, Clock, BarChart3, Settings, Bell, Search, Image, Users, MessageSquare, FolderOpen,
 } from 'lucide-react';
 
 const AdminDashboard = () => {
