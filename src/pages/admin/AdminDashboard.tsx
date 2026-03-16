@@ -10,9 +10,12 @@ import EditProductDialog from '@/components/admin/EditProductDialog';
 import ReviewDialog from '@/components/admin/ReviewDialog';
 import type { DbProduct } from '@/hooks/useProducts';
 import { useSubmissions } from '@/hooks/useSubmissions';
+import { useCategories } from '@/hooks/useCategories';
+import type { DbCategory } from '@/hooks/useCategories';
+import CategoryDialog from '@/components/admin/CategoryDialog';
 import {
   Package, TrendingUp, Plus, Edit, Trash2, Eye, LogOut, Menu, X,
-  CheckCircle, Clock, BarChart3, Settings, Bell, Search, Image, Users, MessageSquare,
+  CheckCircle, Clock, BarChart3, Settings, Bell, Search, Image, Users, MessageSquare, FolderOpen,
 } from 'lucide-react';
 
 const AdminDashboard = () => {
@@ -23,6 +26,7 @@ const AdminDashboard = () => {
     loading: productsLoading, addProduct, updateProduct, approveProduct, reviewProduct, deleteProduct,
   } = useProducts();
   const { submissions, pendingSubmissions, loading: submissionsLoading, updateStatus, deleteSubmission } = useSubmissions();
+  const { categories, loading: categoriesLoading, addCategory, updateCategory, deleteCategory } = useCategories();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
@@ -31,13 +35,15 @@ const AdminDashboard = () => {
   const [editingProduct, setEditingProduct] = useState<DbProduct | null>(null);
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
   const [reviewingProduct, setReviewingProduct] = useState<{ id: string; name: string; comment?: string } | null>(null);
+  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<DbCategory | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     if (!authLoading && (!user || !isAdmin)) navigate('/admin');
   }, [user, isAdmin, authLoading, navigate]);
 
-  if (authLoading || productsLoading || submissionsLoading) {
+  if (authLoading || productsLoading || submissionsLoading || categoriesLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-muted/30">
         <div className="text-center">
@@ -58,6 +64,7 @@ const AdminDashboard = () => {
   const navItems = [
     { id: 'overview', label: 'Overview', icon: BarChart3 },
     { id: 'products', label: 'All Products', icon: Package },
+    { id: 'categories', label: 'Categories', icon: FolderOpen },
     { id: 'approvals', label: 'Approvals', icon: CheckCircle },
     { id: 'submissions', label: 'Submissions', icon: MessageSquare },
     { id: 'analytics', label: 'Analytics', icon: TrendingUp },
@@ -150,6 +157,51 @@ const AdminDashboard = () => {
                 <div className="p-8 text-center text-muted-foreground">No products found</div>
               )}
             </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (activeTab === 'categories') {
+      return (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <h2 className="font-display text-xl font-bold text-foreground">Categories</h2>
+            <Button variant="hero" onClick={() => { setEditingCategory(null); setCategoryDialogOpen(true); }}>
+              <Plus className="h-4 w-4 mr-2" />Add Category
+            </Button>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {categories.map(cat => (
+              <div key={cat.id} className="rounded-2xl bg-card border border-border p-5 flex flex-col">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="text-3xl">{cat.icon}</div>
+                    <div>
+                      <p className="font-medium text-foreground">{cat.name}</p>
+                      <p className="text-xs text-muted-foreground">Order: {cat.sort_order}</p>
+                    </div>
+                  </div>
+                  <Badge variant="secondary" className="text-xs">{cat.color}</Badge>
+                </div>
+                <p className="text-sm text-muted-foreground mb-4 flex-1">{cat.description}</p>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" className="flex-1" onClick={() => { setEditingCategory(cat); setCategoryDialogOpen(true); }}>
+                    <Edit className="h-4 w-4 mr-1" />Edit
+                  </Button>
+                  <Button variant="ghost" size="sm" className="text-destructive" onClick={() => deleteCategory(cat.id)}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+            {categories.length === 0 && (
+              <div className="col-span-full rounded-2xl bg-card border border-border p-12 text-center">
+                <div className="text-5xl mb-4">📂</div>
+                <h3 className="font-display text-lg font-semibold text-foreground mb-2">No categories yet</h3>
+                <p className="text-muted-foreground">Create your first category to organize products</p>
+              </div>
+            )}
           </div>
         </div>
       );
@@ -490,6 +542,15 @@ const AdminDashboard = () => {
           onSubmit={(status, comment) => reviewProduct(reviewingProduct.id, status, comment)}
         />
       )}
+      <CategoryDialog
+        open={categoryDialogOpen}
+        onOpenChange={setCategoryDialogOpen}
+        category={editingCategory}
+        onSubmit={async (data) => {
+          if (editingCategory) return updateCategory(editingCategory.id, data);
+          return addCategory(data);
+        }}
+      />
     </div>
   );
 };
