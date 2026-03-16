@@ -51,6 +51,10 @@ const SortableCategoryCard = ({ category, onEdit, onDelete }: { category: DbCate
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
   const { user, isAdmin, loading: authLoading, signOut } = useAuth();
   const {
     products, recentProducts, pendingProducts, approvedCount, reviewedCount,
