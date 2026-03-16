@@ -43,7 +43,7 @@ const AdminDashboard = () => {
     if (!authLoading && (!user || !isAdmin)) navigate('/admin');
   }, [user, isAdmin, authLoading, navigate]);
 
-  if (authLoading || productsLoading || submissionsLoading) {
+  if (authLoading || productsLoading || submissionsLoading || categoriesLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-muted/30">
         <div className="text-center">
