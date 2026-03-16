@@ -25,6 +25,30 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
+// Sortable category card component
+const SortableCategoryCard = ({ category, onEdit, onDelete }: { category: DbCategory; onEdit: () => void; onDelete: () => void }) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: category.id });
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
+
+  return (
+    <div ref={setNodeRef} style={style} className="rounded-2xl bg-card border border-border p-4 flex items-center gap-4">
+      <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground touch-none">
+        <GripVertical className="h-5 w-5" />
+      </button>
+      <div className="text-2xl">{category.icon}</div>
+      <div className="flex-1 min-w-0">
+        <p className="font-medium text-foreground">{category.name}</p>
+        <p className="text-sm text-muted-foreground truncate">{category.description}</p>
+      </div>
+      <Badge variant="secondary" className="text-xs hidden sm:inline-flex">{category.color}</Badge>
+      <div className="flex gap-1">
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onEdit}><Edit className="h-4 w-4" /></Button>
+        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={onDelete}><Trash2 className="h-4 w-4" /></Button>
+      </div>
+    </div>
+  );
+};
+
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const { user, isAdmin, loading: authLoading, signOut } = useAuth();
