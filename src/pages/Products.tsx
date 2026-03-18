@@ -9,7 +9,10 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { mockProducts } from '@/data/mockProducts';
 import { PRODUCT_CATEGORIES } from '@/types/product';
-import { Search, Filter, X, Grid, List, SlidersHorizontal } from 'lucide-react';
+import { Search, X, Grid, List, SlidersHorizontal, MapPin } from 'lucide-react';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
 
 const Products = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -17,13 +20,23 @@ const Products = () => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(
     searchParams.get('category') || null
   );
+  const [selectedCity, setSelectedCity] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showFilters, setShowFilters] = useState(false);
+
+  // Extract unique cities from products
+  const cities = useMemo(() => {
+    const citySet = new Set<string>();
+    mockProducts.forEach(p => {
+      if (p.location.localArea) citySet.add(p.location.localArea);
+      if (p.location.district) citySet.add(p.location.district);
+    });
+    return Array.from(citySet).sort();
+  }, []);
 
   const filteredProducts = useMemo(() => {
     let products = [...mockProducts];
 
-    // Filter by search query
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       products = products.filter(
@@ -36,12 +49,16 @@ const Products = () => {
       );
     }
 
-    // Filter by category
     if (selectedCategory) {
       products = products.filter((p) => p.category.id === selectedCategory);
     }
 
-    // Filter by special filters from URL
+    if (selectedCity) {
+      products = products.filter(
+        (p) => p.location.localArea === selectedCity || p.location.district === selectedCity
+      );
+    }
+
     const filter = searchParams.get('filter');
     if (filter === 'featured') {
       products = products.filter((p) => p.featured);
@@ -50,29 +67,25 @@ const Products = () => {
     }
 
     return products;
-  }, [searchQuery, selectedCategory, searchParams]);
+  }, [searchQuery, selectedCategory, selectedCity, searchParams]);
 
   const clearFilters = () => {
     setSearchQuery('');
     setSelectedCategory(null);
+    setSelectedCity(null);
     setSearchParams({});
   };
 
-  const hasActiveFilters = searchQuery || selectedCategory || searchParams.get('filter');
+  const hasActiveFilters = searchQuery || selectedCategory || selectedCity || searchParams.get('filter');
 
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
       <main className="flex-1">
-        {/* Page Header */}
         <section className="py-8 md:py-12 border-b border-border bg-muted/30">
           <div className="container">
-            <h1 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-2">
-              Explore Products
-            </h1>
-            <p className="text-muted-foreground">
-              Discover indigenous products from local communities across the region
-            </p>
+            <h1 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-2">Explore Products</h1>
+            <p className="text-muted-foreground">Discover indigenous products from local communities across the region</p>
           </div>
         </section>
 
@@ -81,33 +94,39 @@ const Products = () => {
             {/* Sidebar Filters - Desktop */}
             <aside className="hidden lg:block w-64 flex-shrink-0">
               <div className="sticky top-24 space-y-6">
-                {/* Search */}
                 <div>
                   <h3 className="font-semibold text-foreground mb-3">Search</h3>
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      type="search"
-                      placeholder="Search products..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-10"
-                    />
+                    <Input type="search" placeholder="Search products..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10" />
                   </div>
                 </div>
 
-                {/* Categories */}
+                {/* City Filter */}
+                <div>
+                  <h3 className="font-semibold text-foreground mb-3 flex items-center gap-2">
+                    <MapPin className="h-4 w-4" /> City / Area
+                  </h3>
+                  <Select value={selectedCity || ''} onValueChange={(v) => setSelectedCity(v || null)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="All locations" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All locations</SelectItem>
+                      {cities.map(city => (
+                        <SelectItem key={city} value={city}>{city}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 <div>
                   <h3 className="font-semibold text-foreground mb-3">Categories</h3>
                   <div className="space-y-2">
                     {PRODUCT_CATEGORIES.map((category) => (
                       <button
                         key={category.id}
-                        onClick={() =>
-                          setSelectedCategory(
-                            selectedCategory === category.id ? null : category.id
-                          )
-                        }
+                        onClick={() => setSelectedCategory(selectedCategory === category.id ? null : category.id)}
                         className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left text-sm transition-colors ${
                           selectedCategory === category.id
                             ? 'bg-primary/10 text-primary'
@@ -121,16 +140,9 @@ const Products = () => {
                   </div>
                 </div>
 
-                {/* Clear Filters */}
                 {hasActiveFilters && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={clearFilters}
-                    className="w-full"
-                  >
-                    <X className="h-4 w-4 mr-2" />
-                    Clear Filters
+                  <Button variant="outline" size="sm" onClick={clearFilters} className="w-full">
+                    <X className="h-4 w-4 mr-2" /> Clear Filters
                   </Button>
                 )}
               </div>
@@ -138,45 +150,18 @@ const Products = () => {
 
             {/* Main Content */}
             <div className="flex-1 min-w-0">
-              {/* Mobile Filter Toggle & View Mode */}
               <div className="flex items-center justify-between gap-4 mb-6">
-                <Button
-                  variant="outline"
-                  className="lg:hidden gap-2"
-                  onClick={() => setShowFilters(!showFilters)}
-                >
-                  <SlidersHorizontal className="h-4 w-4" />
-                  Filters
-                  {hasActiveFilters && (
-                    <Badge className="ml-1 h-5 w-5 p-0 flex items-center justify-center">
-                      !
-                    </Badge>
-                  )}
+                <Button variant="outline" className="lg:hidden gap-2" onClick={() => setShowFilters(!showFilters)}>
+                  <SlidersHorizontal className="h-4 w-4" /> Filters
+                  {hasActiveFilters && <Badge className="ml-1 h-5 w-5 p-0 flex items-center justify-center">!</Badge>}
                 </Button>
-
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">
-                    {filteredProducts.length} products
-                  </span>
+                  <span className="text-sm text-muted-foreground">{filteredProducts.length} products</span>
                   <div className="flex border border-border rounded-lg overflow-hidden">
-                    <button
-                      onClick={() => setViewMode('grid')}
-                      className={`p-2 ${
-                        viewMode === 'grid'
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-background text-muted-foreground hover:text-foreground'
-                      }`}
-                    >
+                    <button onClick={() => setViewMode('grid')} className={`p-2 ${viewMode === 'grid' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:text-foreground'}`}>
                       <Grid className="h-4 w-4" />
                     </button>
-                    <button
-                      onClick={() => setViewMode('list')}
-                      className={`p-2 ${
-                        viewMode === 'list'
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-background text-muted-foreground hover:text-foreground'
-                      }`}
-                    >
+                    <button onClick={() => setViewMode('list')} className={`p-2 ${viewMode === 'list' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:text-foreground'}`}>
                       <List className="h-4 w-4" />
                     </button>
                   </div>
@@ -188,34 +173,29 @@ const Products = () => {
                 <div className="lg:hidden mb-6 p-4 rounded-xl bg-muted/50 border border-border space-y-4">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      type="search"
-                      placeholder="Search products..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-10"
-                    />
+                    <Input type="search" placeholder="Search products..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10" />
                   </div>
+                  <Select value={selectedCity || ''} onValueChange={(v) => setSelectedCity(v || null)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Filter by city" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All locations</SelectItem>
+                      {cities.map(city => (
+                        <SelectItem key={city} value={city}>{city}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <div className="flex flex-wrap gap-2">
                     {PRODUCT_CATEGORIES.map((category) => (
-                      <Badge
-                        key={category.id}
-                        variant={selectedCategory === category.id ? 'default' : 'outline'}
-                        className="cursor-pointer"
-                        onClick={() =>
-                          setSelectedCategory(
-                            selectedCategory === category.id ? null : category.id
-                          )
-                        }
-                      >
+                      <Badge key={category.id} variant={selectedCategory === category.id ? 'default' : 'outline'} className="cursor-pointer" onClick={() => setSelectedCategory(selectedCategory === category.id ? null : category.id)}>
                         {category.icon} {category.name}
                       </Badge>
                     ))}
                   </div>
                   {hasActiveFilters && (
                     <Button variant="ghost" size="sm" onClick={clearFilters}>
-                      <X className="h-4 w-4 mr-2" />
-                      Clear Filters
+                      <X className="h-4 w-4 mr-2" /> Clear Filters
                     </Button>
                   )}
                 </div>
@@ -228,32 +208,25 @@ const Products = () => {
                   {searchQuery && (
                     <Badge variant="secondary" className="gap-1">
                       Search: {searchQuery}
-                      <X
-                        className="h-3 w-3 cursor-pointer"
-                        onClick={() => setSearchQuery('')}
-                      />
+                      <X className="h-3 w-3 cursor-pointer" onClick={() => setSearchQuery('')} />
                     </Badge>
                   )}
                   {selectedCategory && (
                     <Badge variant="secondary" className="gap-1">
                       {PRODUCT_CATEGORIES.find((c) => c.id === selectedCategory)?.name}
-                      <X
-                        className="h-3 w-3 cursor-pointer"
-                        onClick={() => setSelectedCategory(null)}
-                      />
+                      <X className="h-3 w-3 cursor-pointer" onClick={() => setSelectedCategory(null)} />
+                    </Badge>
+                  )}
+                  {selectedCity && (
+                    <Badge variant="secondary" className="gap-1">
+                      <MapPin className="h-3 w-3" /> {selectedCity}
+                      <X className="h-3 w-3 cursor-pointer" onClick={() => setSelectedCity(null)} />
                     </Badge>
                   )}
                   {searchParams.get('filter') && (
                     <Badge variant="secondary" className="gap-1">
                       {searchParams.get('filter')}
-                      <X
-                        className="h-3 w-3 cursor-pointer"
-                        onClick={() => {
-                          const newParams = new URLSearchParams(searchParams);
-                          newParams.delete('filter');
-                          setSearchParams(newParams);
-                        }}
-                      />
+                      <X className="h-3 w-3 cursor-pointer" onClick={() => { const p = new URLSearchParams(searchParams); p.delete('filter'); setSearchParams(p); }} />
                     </Badge>
                   )}
                 </div>
@@ -261,19 +234,9 @@ const Products = () => {
 
               {/* Products Grid */}
               {filteredProducts.length > 0 ? (
-                <div
-                  className={
-                    viewMode === 'grid'
-                      ? 'grid sm:grid-cols-2 xl:grid-cols-3 gap-6'
-                      : 'space-y-4'
-                  }
-                >
+                <div className={viewMode === 'grid' ? 'grid sm:grid-cols-2 xl:grid-cols-3 gap-6' : 'space-y-4'}>
                   {filteredProducts.map((product, index) => (
-                    <div
-                      key={product.id}
-                      className="animate-fade-up"
-                      style={{ animationDelay: `${index * 0.05}s` }}
-                    >
+                    <div key={product.id} className="animate-fade-up" style={{ animationDelay: `${index * 0.05}s` }}>
                       <ProductCard product={product} />
                     </div>
                   ))}
@@ -281,15 +244,9 @@ const Products = () => {
               ) : (
                 <div className="text-center py-16">
                   <div className="text-6xl mb-4">🔍</div>
-                  <h3 className="font-display text-xl font-semibold text-foreground mb-2">
-                    No products found
-                  </h3>
-                  <p className="text-muted-foreground mb-4">
-                    Try adjusting your search or filter criteria
-                  </p>
-                  <Button variant="outline" onClick={clearFilters}>
-                    Clear all filters
-                  </Button>
+                  <h3 className="font-display text-xl font-semibold text-foreground mb-2">No products found</h3>
+                  <p className="text-muted-foreground mb-4">Try adjusting your search or filter criteria</p>
+                  <Button variant="outline" onClick={clearFilters}>Clear all filters</Button>
                 </div>
               )}
             </div>
