@@ -51,7 +51,51 @@ const SortableCategoryCard = ({ category, onEdit, onDelete }: { category: DbCate
   );
 };
 
-const AdminDashboard = () => {
+// Admin chat area for support tab
+const AdminChatArea = ({ conversationId, userId }: { conversationId: string; userId: string }) => {
+  const { messages, loading, sendMessage } = useSupportMessages(conversationId);
+  const [input, setInput] = useState('');
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  const handleSend = async () => {
+    if (!input.trim()) return;
+    const msg = input.trim();
+    setInput('');
+    await sendMessage(msg, 'admin');
+  };
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+        {loading && <p className="text-center text-muted-foreground text-sm">Loading...</p>}
+        {messages.map(m => (
+          <div key={m.id} className={`flex ${m.sender_id === userId ? 'justify-end' : 'justify-start'}`}>
+            <div className={`max-w-[75%] px-4 py-2.5 rounded-2xl text-sm ${
+              m.sender_id === userId
+                ? 'bg-primary text-primary-foreground rounded-br-md'
+                : 'bg-muted text-foreground rounded-bl-md'
+            }`}>
+              <p className="text-xs font-semibold mb-1 opacity-70">{m.sender_role === 'admin' ? 'You (Admin)' : 'Customer'}</p>
+              <p>{m.message}</p>
+              <p className="text-[10px] mt-1 opacity-60">{new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+            </div>
+          </div>
+        ))}
+        <div ref={bottomRef} />
+      </div>
+      <div className="p-3 border-t border-border flex gap-2">
+        <Input placeholder="Type your reply..." value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSend()} />
+        <Button size="icon" onClick={handleSend}><Send className="h-4 w-4" /></Button>
+      </div>
+    </div>
+  );
+};
+
+
   const navigate = useNavigate();
   const sensors = useSensors(
     useSensor(PointerSensor),
