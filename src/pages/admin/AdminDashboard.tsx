@@ -64,8 +64,10 @@ const AdminDashboard = () => {
   } = useProducts();
   const { submissions, pendingSubmissions, loading: submissionsLoading, updateStatus, deleteSubmission } = useSubmissions();
   const { categories, loading: categoriesLoading, addCategory, updateCategory, deleteCategory } = useCategories();
+  const { conversations: supportConversations, loading: supportLoading, closeConversation } = useSupport();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [activeSupportConvoId, setActiveSupportConvoId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
