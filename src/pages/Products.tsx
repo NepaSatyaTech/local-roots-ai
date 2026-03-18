@@ -175,7 +175,7 @@ const Products = () => {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input type="search" placeholder="Search products..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10" />
                   </div>
-                  <Select value={selectedCity || ''} onValueChange={(v) => setSelectedCity(v || null)}>
+                  <Select value={selectedCity || 'all'} onValueChange={(v) => setSelectedCity(v === 'all' ? null : v)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Filter by city" />
                     </SelectTrigger>
