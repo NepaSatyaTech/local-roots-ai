@@ -106,6 +106,7 @@ const AdminDashboard = () => {
     { id: 'categories', label: 'Categories', icon: FolderOpen },
     { id: 'approvals', label: 'Approvals', icon: CheckCircle },
     { id: 'submissions', label: 'Submissions', icon: MessageSquare },
+    { id: 'support', label: 'Support Chats', icon: Headphones },
     { id: 'analytics', label: 'Analytics', icon: TrendingUp },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
