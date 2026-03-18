@@ -13,9 +13,11 @@ import { useSubmissions } from '@/hooks/useSubmissions';
 import { useCategories } from '@/hooks/useCategories';
 import type { DbCategory } from '@/hooks/useCategories';
 import CategoryDialog from '@/components/admin/CategoryDialog';
+import { useSupport, useSupportMessages } from '@/hooks/useSupport';
+import type { SupportConversation } from '@/hooks/useSupport';
 import {
   Package, TrendingUp, Plus, Edit, Trash2, Eye, LogOut, Menu, X,
-  CheckCircle, Clock, BarChart3, Settings, Bell, Search, Image, Users, MessageSquare, FolderOpen, GripVertical,
+  CheckCircle, Clock, BarChart3, Settings, Bell, Search, Image, Users, MessageSquare, FolderOpen, GripVertical, Send, Headphones,
 } from 'lucide-react';
 import {
   DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent,
