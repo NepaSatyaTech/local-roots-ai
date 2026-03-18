@@ -364,6 +364,53 @@ const AdminDashboard = () => {
       );
     }
 
+    if (activeTab === 'support') {
+      return (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="font-display text-xl font-bold text-foreground">Support Chats</h2>
+            <Badge variant="secondary">{supportConversations.filter(c => c.status === 'open').length} open</Badge>
+          </div>
+          {activeSupportConvoId ? (
+            <div>
+              <button onClick={() => setActiveSupportConvoId(null)} className="text-sm text-muted-foreground hover:text-foreground mb-4 inline-flex items-center gap-1">
+                ← Back to conversations
+              </button>
+              <div className="rounded-2xl bg-card border border-border overflow-hidden" style={{ height: '500px' }}>
+                <AdminChatArea conversationId={activeSupportConvoId} userId={user?.id || ''} />
+              </div>
+            </div>
+          ) : supportConversations.length === 0 ? (
+            <div className="rounded-2xl bg-card border border-border p-12 text-center">
+              <Headphones className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="font-display text-lg font-semibold text-foreground mb-2">No support queries</h3>
+              <p className="text-muted-foreground">Customer queries will appear here</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {supportConversations.map(c => (
+                <div key={c.id} className="flex items-center gap-4 p-4 rounded-xl bg-card border border-border hover:border-primary/30 transition-colors">
+                  <div className="flex-1 min-w-0 cursor-pointer" onClick={() => setActiveSupportConvoId(c.id)}>
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="font-medium text-foreground">{c.subject || 'No subject'}</p>
+                      <Badge variant={c.status === 'open' ? 'default' : 'secondary'} className="text-xs">{c.status}</Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground">{c.user_email} • {new Date(c.created_at).toLocaleDateString()}</p>
+                  </div>
+                  <div className="flex gap-1">
+                    <Button variant="sage" size="sm" onClick={() => setActiveSupportConvoId(c.id)}>Reply</Button>
+                    {c.status === 'open' && (
+                      <Button variant="outline" size="sm" onClick={() => closeConversation(c.id)}>Close</Button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
     if (activeTab === 'analytics') {
       const categoryBreakdown = products.reduce((acc, p) => {
         acc[p.category_name] = (acc[p.category_name] || 0) + 1;
