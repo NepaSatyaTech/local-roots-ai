@@ -14,6 +14,7 @@ import Chat from "./pages/Chat";
 import Scan from "./pages/Scan";
 import CommunityChat from "./pages/CommunityChat";
 import Verify from "./pages/Verify";
+import Support from "./pages/Support";
 import AdminLogin from "./pages/admin/AdminLogin";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import NotFound from "./pages/NotFound";
@@ -41,6 +42,7 @@ const App = () => (
           <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
           <Route path="/scan" element={<ProtectedRoute><Scan /></ProtectedRoute>} />
           <Route path="/community" element={<ProtectedRoute><CommunityChat /></ProtectedRoute>} />
+          <Route path="/support" element={<ProtectedRoute><Support /></ProtectedRoute>} />
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
 
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
