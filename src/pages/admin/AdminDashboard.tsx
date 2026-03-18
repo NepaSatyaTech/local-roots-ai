@@ -95,6 +95,7 @@ const AdminChatArea = ({ conversationId, userId }: { conversationId: string; use
   );
 };
 
+const AdminDashboard = () => {
 
   const navigate = useNavigate();
   const sensors = useSensors(
