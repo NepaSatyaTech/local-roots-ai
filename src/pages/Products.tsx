@@ -107,7 +107,7 @@ const Products = () => {
                   <h3 className="font-semibold text-foreground mb-3 flex items-center gap-2">
                     <MapPin className="h-4 w-4" /> City / Area
                   </h3>
-                  <Select value={selectedCity || ''} onValueChange={(v) => setSelectedCity(v || null)}>
+                  <Select value={selectedCity || 'all'} onValueChange={(v) => setSelectedCity(v === 'all' ? null : v)}>
                     <SelectTrigger>
                       <SelectValue placeholder="All locations" />
                     </SelectTrigger>
