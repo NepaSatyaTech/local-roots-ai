@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -13,9 +13,11 @@ import { useSubmissions } from '@/hooks/useSubmissions';
 import { useCategories } from '@/hooks/useCategories';
 import type { DbCategory } from '@/hooks/useCategories';
 import CategoryDialog from '@/components/admin/CategoryDialog';
+import { useSupport, useSupportMessages } from '@/hooks/useSupport';
+import type { SupportConversation } from '@/hooks/useSupport';
 import {
   Package, TrendingUp, Plus, Edit, Trash2, Eye, LogOut, Menu, X,
-  CheckCircle, Clock, BarChart3, Settings, Bell, Search, Image, Users, MessageSquare, FolderOpen, GripVertical,
+  CheckCircle, Clock, BarChart3, Settings, Bell, Search, Image, Users, MessageSquare, FolderOpen, GripVertical, Send, Headphones,
 } from 'lucide-react';
 import {
   DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent,
@@ -49,7 +51,52 @@ const SortableCategoryCard = ({ category, onEdit, onDelete }: { category: DbCate
   );
 };
 
+// Admin chat area for support tab
+const AdminChatArea = ({ conversationId, userId }: { conversationId: string; userId: string }) => {
+  const { messages, loading, sendMessage } = useSupportMessages(conversationId);
+  const [input, setInput] = useState('');
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  const handleSend = async () => {
+    if (!input.trim()) return;
+    const msg = input.trim();
+    setInput('');
+    await sendMessage(msg, 'admin');
+  };
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+        {loading && <p className="text-center text-muted-foreground text-sm">Loading...</p>}
+        {messages.map(m => (
+          <div key={m.id} className={`flex ${m.sender_id === userId ? 'justify-end' : 'justify-start'}`}>
+            <div className={`max-w-[75%] px-4 py-2.5 rounded-2xl text-sm ${
+              m.sender_id === userId
+                ? 'bg-primary text-primary-foreground rounded-br-md'
+                : 'bg-muted text-foreground rounded-bl-md'
+            }`}>
+              <p className="text-xs font-semibold mb-1 opacity-70">{m.sender_role === 'admin' ? 'You (Admin)' : 'Customer'}</p>
+              <p>{m.message}</p>
+              <p className="text-[10px] mt-1 opacity-60">{new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+            </div>
+          </div>
+        ))}
+        <div ref={bottomRef} />
+      </div>
+      <div className="p-3 border-t border-border flex gap-2">
+        <Input placeholder="Type your reply..." value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSend()} />
+        <Button size="icon" onClick={handleSend}><Send className="h-4 w-4" /></Button>
+      </div>
+    </div>
+  );
+};
+
 const AdminDashboard = () => {
+
   const navigate = useNavigate();
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -62,8 +109,10 @@ const AdminDashboard = () => {
   } = useProducts();
   const { submissions, pendingSubmissions, loading: submissionsLoading, updateStatus, deleteSubmission } = useSubmissions();
   const { categories, loading: categoriesLoading, addCategory, updateCategory, deleteCategory } = useCategories();
+  const { conversations: supportConversations, loading: supportLoading, closeConversation } = useSupport();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [activeSupportConvoId, setActiveSupportConvoId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -78,7 +127,7 @@ const AdminDashboard = () => {
     if (!authLoading && (!user || !isAdmin)) navigate('/admin');
   }, [user, isAdmin, authLoading, navigate]);
 
-  if (authLoading || productsLoading || submissionsLoading || categoriesLoading) {
+  if (authLoading || productsLoading || submissionsLoading || categoriesLoading || supportLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-muted/30">
         <div className="text-center">
@@ -102,6 +151,7 @@ const AdminDashboard = () => {
     { id: 'categories', label: 'Categories', icon: FolderOpen },
     { id: 'approvals', label: 'Approvals', icon: CheckCircle },
     { id: 'submissions', label: 'Submissions', icon: MessageSquare },
+    { id: 'support', label: 'Support Chats', icon: Headphones },
     { id: 'analytics', label: 'Analytics', icon: TrendingUp },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
@@ -353,6 +403,53 @@ const AdminDashboard = () => {
                   </tbody>
                 </table>
               </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    if (activeTab === 'support') {
+      return (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="font-display text-xl font-bold text-foreground">Support Chats</h2>
+            <Badge variant="secondary">{supportConversations.filter(c => c.status === 'open').length} open</Badge>
+          </div>
+          {activeSupportConvoId ? (
+            <div>
+              <button onClick={() => setActiveSupportConvoId(null)} className="text-sm text-muted-foreground hover:text-foreground mb-4 inline-flex items-center gap-1">
+                ← Back to conversations
+              </button>
+              <div className="rounded-2xl bg-card border border-border overflow-hidden" style={{ height: '500px' }}>
+                <AdminChatArea conversationId={activeSupportConvoId} userId={user?.id || ''} />
+              </div>
+            </div>
+          ) : supportConversations.length === 0 ? (
+            <div className="rounded-2xl bg-card border border-border p-12 text-center">
+              <Headphones className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="font-display text-lg font-semibold text-foreground mb-2">No support queries</h3>
+              <p className="text-muted-foreground">Customer queries will appear here</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {supportConversations.map(c => (
+                <div key={c.id} className="flex items-center gap-4 p-4 rounded-xl bg-card border border-border hover:border-primary/30 transition-colors">
+                  <div className="flex-1 min-w-0 cursor-pointer" onClick={() => setActiveSupportConvoId(c.id)}>
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="font-medium text-foreground">{c.subject || 'No subject'}</p>
+                      <Badge variant={c.status === 'open' ? 'default' : 'secondary'} className="text-xs">{c.status}</Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground">{c.user_email} • {new Date(c.created_at).toLocaleDateString()}</p>
+                  </div>
+                  <div className="flex gap-1">
+                    <Button variant="sage" size="sm" onClick={() => setActiveSupportConvoId(c.id)}>Reply</Button>
+                    {c.status === 'open' && (
+                      <Button variant="outline" size="sm" onClick={() => closeConversation(c.id)}>Close</Button>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>

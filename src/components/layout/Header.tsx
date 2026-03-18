@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, Menu, X, MessageCircle, User, MapPin, ScanLine } from 'lucide-react';
+import { Search, Menu, X, MessageCircle, User, MapPin, ScanLine, Headphones } from 'lucide-react';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -16,6 +16,7 @@ const Header = () => {
     { path: '/products', label: 'Products' },
     { path: '/community', label: 'Community' },
     { path: '/chat', label: 'AI Chat' },
+    { path: '/support', label: 'Support' },
   ];
 
   const isActive = (path: string) => location.pathname === path;
