@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { MessageCircle, X, Send, Bot, User, Sparkles, Loader2 } from 'lucide-react';
+import { streamChat, type ChatMsg } from '@/lib/chatStream';
 
 interface Message {
   id: string;
@@ -43,28 +44,48 @@ const ChatWidget = () => {
     };
 
     setMessages((prev) => [...prev, userMessage]);
+    const messageText = inputValue.trim();
     setInputValue('');
     setIsLoading(true);
 
-    // Simulate AI response (will be replaced with actual AI integration)
-    setTimeout(() => {
-      const responses = [
-        "That's a great question! Let me search our database of local products for you.",
-        "I found some interesting information about that product. It's traditionally used in many communities.",
-        "Would you like me to show you where you can find this product locally?",
-        "I don't have information about that specific product yet. Would you like to contribute your knowledge about it?",
-      ];
-      
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: responses[Math.floor(Math.random() * responses.length)],
-        timestamp: new Date(),
-      };
+    // Build chat history for AI
+    const chatHistory: ChatMsg[] = messages
+      .filter(m => m.id !== '1')
+      .map(m => ({ role: m.role, content: m.content }));
+    chatHistory.push({ role: 'user', content: messageText });
 
-      setMessages((prev) => [...prev, assistantMessage]);
+    let assistantSoFar = '';
+    const assistantId = (Date.now() + 1).toString();
+
+    try {
+      await streamChat({
+        messages: chatHistory,
+        onDelta: (chunk) => {
+          assistantSoFar += chunk;
+          setMessages((prev) => {
+            const last = prev[prev.length - 1];
+            if (last?.id === assistantId) {
+              return prev.map((m, i) => i === prev.length - 1 ? { ...m, content: assistantSoFar } : m);
+            }
+            return [...prev, { id: assistantId, role: 'assistant', content: assistantSoFar, timestamp: new Date() }];
+          });
+        },
+        onDone: () => setIsLoading(false),
+        onError: (error) => {
+          setMessages((prev) => [
+            ...prev,
+            { id: assistantId, role: 'assistant', content: `Sorry, I encountered an error: ${error}`, timestamp: new Date() },
+          ]);
+          setIsLoading(false);
+        },
+      });
+    } catch {
+      setMessages((prev) => [
+        ...prev,
+        { id: (Date.now() + 2).toString(), role: 'assistant', content: 'Sorry, I couldn\'t connect to the AI service. Please try again.', timestamp: new Date() },
+      ]);
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -106,12 +127,7 @@ const ChatWidget = () => {
                 <p className="text-xs text-muted-foreground">Local Products Expert</p>
               </div>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsOpen(false)}
-              className="h-8 w-8"
-            >
+            <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)} className="h-8 w-8">
               <X className="h-4 w-4" />
             </Button>
           </div>
@@ -119,35 +135,20 @@ const ChatWidget = () => {
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex gap-3 ${message.role === 'user' ? 'flex-row-reverse' : ''}`}
-              >
-                <div
-                  className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
-                    message.role === 'user'
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-sage/20 text-sage'
-                  }`}
-                >
-                  {message.role === 'user' ? (
-                    <User className="h-4 w-4" />
-                  ) : (
-                    <Bot className="h-4 w-4" />
-                  )}
+              <div key={message.id} className={`flex gap-3 ${message.role === 'user' ? 'flex-row-reverse' : ''}`}>
+                <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
+                  message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-sage/20 text-sage'
+                }`}>
+                  {message.role === 'user' ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
                 </div>
-                <div
-                  className={`max-w-[75%] px-4 py-2 rounded-2xl ${
-                    message.role === 'user'
-                      ? 'bg-primary text-primary-foreground rounded-tr-none'
-                      : 'bg-muted text-foreground rounded-tl-none'
-                  }`}
-                >
-                  <p className="text-sm">{message.content}</p>
+                <div className={`max-w-[75%] px-4 py-2 rounded-2xl ${
+                  message.role === 'user' ? 'bg-primary text-primary-foreground rounded-tr-none' : 'bg-muted text-foreground rounded-tl-none'
+                }`}>
+                  <p className="text-sm whitespace-pre-line">{message.content}</p>
                 </div>
               </div>
             ))}
-            {isLoading && (
+            {isLoading && messages[messages.length - 1]?.role !== 'assistant' && (
               <div className="flex gap-3">
                 <div className="flex-shrink-0 w-8 h-8 rounded-full bg-sage/20 flex items-center justify-center">
                   <Bot className="h-4 w-4 text-sage" />
@@ -166,21 +167,17 @@ const ChatWidget = () => {
               <Input
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
-                onKeyPress={handleKeyPress}
+                onKeyDown={handleKeyPress}
                 placeholder="Ask about local products..."
                 className="flex-1"
                 disabled={isLoading}
               />
-              <Button
-                onClick={handleSend}
-                disabled={!inputValue.trim() || isLoading}
-                size="icon"
-              >
+              <Button onClick={handleSend} disabled={!inputValue.trim() || isLoading} size="icon">
                 <Send className="h-4 w-4" />
               </Button>
             </div>
             <p className="text-xs text-muted-foreground mt-2 text-center">
-              Can't find a product? Help us by contributing your knowledge!
+              Powered by AI • Connected to LocalFinds database
             </p>
           </div>
         </div>

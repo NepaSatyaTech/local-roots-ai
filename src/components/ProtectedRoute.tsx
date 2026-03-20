@@ -37,7 +37,7 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   }
 
   if (!authenticated) {
-    return <Navigate to="/admin" state={{ from: location, requireLogin: true }} replace />;
+    return <Navigate to={`/verify?redirect=${encodeURIComponent(location.pathname)}`} replace />;
   }
 
   return <>{children}</>;
