@@ -31,7 +31,7 @@ const App = () => (
           {/* Public routes */}
           <Route path="/" element={<Index />} />
           <Route path="/admin" element={<AdminLogin />} />
-          <Route path="/verify" element={<Verify />} />
+          <Route path="/auth" element={<Auth />} />
 
           {/* Protected routes - require login */}
           <Route path="/about" element={<ProtectedRoute><About /></ProtectedRoute>} />
