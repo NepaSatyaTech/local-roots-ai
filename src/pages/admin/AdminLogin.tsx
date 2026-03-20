@@ -21,6 +21,9 @@ const AdminLogin = () => {
     if (!loading && user && isAdmin) {
       navigate('/admin/dashboard');
     }
+    if (!loading && user && !isAdmin) {
+      setError('You do not have admin privileges. Please contact the administrator.');
+    }
   }, [user, isAdmin, loading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
