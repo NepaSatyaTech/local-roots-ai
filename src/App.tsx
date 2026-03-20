@@ -13,7 +13,7 @@ import CategoryPage from "./pages/CategoryPage";
 import Chat from "./pages/Chat";
 import Scan from "./pages/Scan";
 import CommunityChat from "./pages/CommunityChat";
-import Verify from "./pages/Verify";
+import Auth from "./pages/Auth";
 import Support from "./pages/Support";
 import AdminLogin from "./pages/admin/AdminLogin";
 import AdminDashboard from "./pages/admin/AdminDashboard";
