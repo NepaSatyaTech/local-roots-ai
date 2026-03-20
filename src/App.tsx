@@ -13,7 +13,7 @@ import CategoryPage from "./pages/CategoryPage";
 import Chat from "./pages/Chat";
 import Scan from "./pages/Scan";
 import CommunityChat from "./pages/CommunityChat";
-import Verify from "./pages/Verify";
+import Auth from "./pages/Auth";
 import Support from "./pages/Support";
 import AdminLogin from "./pages/admin/AdminLogin";
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -31,7 +31,7 @@ const App = () => (
           {/* Public routes */}
           <Route path="/" element={<Index />} />
           <Route path="/admin" element={<AdminLogin />} />
-          <Route path="/verify" element={<Verify />} />
+          <Route path="/auth" element={<Auth />} />
 
           {/* Protected routes - require login */}
           <Route path="/about" element={<ProtectedRoute><About /></ProtectedRoute>} />
