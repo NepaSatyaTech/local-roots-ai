@@ -9,14 +9,34 @@ const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [user, setUser] = useState<any>(null);
+  const [username, setUsername] = useState('');
   const location = useLocation();
   const navigate = useNavigate();
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => setUser(session?.user ?? null));
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => setUser(session?.user ?? null));
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      if (session?.user) fetchUsername(session.user.id);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        setTimeout(() => fetchUsername(session.user.id), 0);
+      } else {
+        setUsername('');
+      }
+    });
     return () => subscription.unsubscribe();
   }, []);
+
+  const fetchUsername = async (userId: string) => {
+    const { data } = await supabase
+      .from('profiles')
+      .select('username')
+      .eq('user_id', userId)
+      .maybeSingle();
+    setUsername(data?.username || '');
+  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -79,6 +99,11 @@ const Header = () => {
 
           {user ? (
             <div className="flex items-center gap-2">
+              {username && (
+                <span className="hidden sm:inline text-sm font-medium text-foreground">
+                  Hi, {username}
+                </span>
+              )}
               <Link to="/admin">
                 <Button variant="ghost" size="icon"><User className="h-5 w-5" /></Button>
               </Link>
@@ -104,6 +129,11 @@ const Header = () => {
       {isMenuOpen && (
         <div className="md:hidden border-t border-border bg-background animate-fade-in">
           <div className="container py-4 space-y-4">
+            {user && username && (
+              <div className="px-4 py-2 text-sm font-medium text-foreground">
+                👋 Hi, {username}
+              </div>
+            )}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input type="search" placeholder="Search products..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10" />
