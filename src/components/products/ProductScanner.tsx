@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Search, ScanLine, X } from 'lucide-react';
+import { Search, ScanLine, X, Camera, CameraOff } from 'lucide-react';
 import type { DbProduct } from '@/hooks/useProducts';
 
 const ProductScanner = () => {
@@ -11,16 +11,22 @@ const ProductScanner = () => {
   const [results, setResults] = useState<DbProduct[]>([]);
   const [searched, setSearched] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [cameraActive, setCameraActive] = useState(false);
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  const handleSearch = async () => {
-    if (!query.trim()) return;
+  const handleSearch = async (searchQuery?: string) => {
+    const q = searchQuery || query;
+    if (!q.trim()) return;
     setLoading(true);
     setSearched(true);
 
     const { data, error } = await supabase
       .from('products')
       .select('*')
-      .or(`name.ilike.%${query}%,category_name.ilike.%${query}%,location_state.ilike.%${query}%`)
+      .or(`name.ilike.%${q}%,category_name.ilike.%${q}%,location_state.ilike.%${q}%`)
       .order('created_at', { ascending: false })
       .limit(20);
 
@@ -34,6 +40,86 @@ const ProductScanner = () => {
     setQuery('');
     setResults([]);
     setSearched(false);
+    setCapturedImage(null);
+  };
+
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+      setCameraActive(true);
+    } catch (err) {
+      console.error('Camera access denied:', err);
+      alert('Camera access was denied. Please allow camera permissions in your browser settings.');
+    }
+  };
+
+  const stopCamera = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    setCameraActive(false);
+  }, []);
+
+  const captureAndAnalyze = async () => {
+    if (!videoRef.current || !canvasRef.current) return;
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.drawImage(video, 0, 0);
+    const imageDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+    setCapturedImage(imageDataUrl);
+    stopCamera();
+
+    // Use AI to analyze the captured image
+    setLoading(true);
+    setSearched(true);
+    try {
+      const response = await supabase.functions.invoke('chat', {
+        body: {
+          messages: [
+            {
+              role: 'user',
+              content: `Analyze this product image and identify the product name in 1-3 words only. Just respond with the product name, nothing else. Image: ${imageDataUrl.substring(0, 500)}`,
+            }
+          ],
+        },
+      });
+      
+      if (response.data) {
+        const reader = response.data.getReader?.();
+        if (reader) {
+          let text = '';
+          const decoder = new TextDecoder();
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            text += decoder.decode(value, { stream: true });
+          }
+          const productName = text.trim().substring(0, 50);
+          setQuery(productName);
+          await handleSearch(productName);
+        }
+      }
+    } catch {
+      // Fallback: just prompt user to type
+      setLoading(false);
+      setResults([]);
+    }
+    setLoading(false);
   };
 
   return (
@@ -44,7 +130,44 @@ const ProductScanner = () => {
           <ScanLine className="h-8 w-8 text-primary" />
         </div>
         <h2 className="font-display text-2xl font-bold text-foreground">Product Scanner</h2>
-        <p className="text-muted-foreground mt-1">Search for registered products by name, category, or location</p>
+        <p className="text-muted-foreground mt-1">Search by text or scan with your camera</p>
+      </div>
+
+      {/* Camera Section */}
+      <div className="max-w-xl mx-auto">
+        {!cameraActive && !capturedImage && (
+          <Button onClick={startCamera} variant="outline" className="w-full gap-2 mb-4">
+            <Camera className="h-5 w-5" /> Open Camera to Scan
+          </Button>
+        )}
+
+        {cameraActive && (
+          <div className="relative rounded-2xl overflow-hidden border border-border mb-4">
+            <video ref={videoRef} className="w-full aspect-video object-cover" playsInline muted />
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="w-48 h-48 border-2 border-primary/60 rounded-xl" />
+            </div>
+            <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-3">
+              <Button onClick={captureAndAnalyze} variant="hero" className="gap-2">
+                <ScanLine className="h-5 w-5" /> Capture & Scan
+              </Button>
+              <Button onClick={stopCamera} variant="outline" className="gap-2">
+                <CameraOff className="h-5 w-5" /> Close
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {capturedImage && (
+          <div className="mb-4">
+            <img src={capturedImage} alt="Captured" className="w-full rounded-2xl border border-border" />
+            <Button onClick={() => { setCapturedImage(null); startCamera(); }} variant="outline" className="mt-2 w-full gap-2">
+              <Camera className="h-4 w-4" /> Scan Again
+            </Button>
+          </div>
+        )}
+
+        <canvas ref={canvasRef} className="hidden" />
       </div>
 
       {/* Search Bar */}
@@ -64,7 +187,7 @@ const ProductScanner = () => {
             <X className="h-4 w-4" />
           </Button>
         )}
-        <Button onClick={handleSearch} disabled={loading || !query.trim()} variant="hero">
+        <Button onClick={() => handleSearch()} disabled={loading || !query.trim()} variant="hero">
           {loading ? 'Scanning...' : 'Scan'}
         </Button>
       </div>
