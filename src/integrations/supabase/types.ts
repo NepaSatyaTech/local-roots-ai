@@ -206,6 +206,39 @@ export type Database = {
         }
         Relationships: []
       }
+      profiles: {
+        Row: {
+          address: string | null
+          country: string | null
+          created_at: string
+          id: string
+          phone: string | null
+          updated_at: string
+          user_id: string
+          username: string
+        }
+        Insert: {
+          address?: string | null
+          country?: string | null
+          created_at?: string
+          id?: string
+          phone?: string | null
+          updated_at?: string
+          user_id: string
+          username?: string
+        }
+        Update: {
+          address?: string | null
+          country?: string | null
+          created_at?: string
+          id?: string
+          phone?: string | null
+          updated_at?: string
+          user_id?: string
+          username?: string
+        }
+        Relationships: []
+      }
       saved_products: {
         Row: {
           created_at: string
