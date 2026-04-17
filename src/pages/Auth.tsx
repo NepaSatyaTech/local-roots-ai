@@ -4,13 +4,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
-import { Mail, Lock, ArrowRight, ShieldCheck, User, Phone, MapPin, Globe } from 'lucide-react';
+import { Mail, Lock, ArrowRight, ShieldCheck, User, Phone, MapPin, Globe, UserCog, Users } from 'lucide-react';
+
+type Role = 'client' | 'admin';
 
 const Auth = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const redirectTo = searchParams.get('redirect') || '/';
 
+  const [role, setRole] = useState<Role>('client');
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -28,6 +31,36 @@ const Auth = () => {
       if (session) navigate(redirectTo, { replace: true });
     });
   }, [navigate, redirectTo]);
+
+  const goAfterLogin = async (userId: string) => {
+    if (role === 'admin') {
+      // Check admin role
+      const { data } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .eq('role', 'admin');
+      if (data && data.length > 0) {
+        navigate('/admin/dashboard', { replace: true });
+      } else {
+        // Try to promote first user to admin
+        await supabase.functions.invoke('promote-admin').catch(() => {});
+        const { data: again } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', userId)
+          .eq('role', 'admin');
+        if (again && again.length > 0) {
+          navigate('/admin/dashboard', { replace: true });
+        } else {
+          setError('You do not have admin privileges. Please contact the administrator.');
+          await supabase.auth.signOut();
+        }
+      }
+    } else {
+      navigate(redirectTo, { replace: true });
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,28 +97,36 @@ const Auth = () => {
 
       if (signUpError) {
         setError(signUpError.message);
-      } else if (signUpData.user) {
-        // Update profile with additional info
-        setTimeout(async () => {
-          await supabase.from('profiles').update({
-            phone,
-            address,
-            country,
-          }).eq('user_id', signUpData.user!.id);
-        }, 1000);
-
-        setInfo('Account created! Please check your email to confirm, then sign in.');
-        setMode('login');
+        setLoading(false);
+        return;
       }
+
+      // Auto sign-in (email auto-confirm is enabled)
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+
+      if (signInError || !signInData.user) {
+        setInfo('Account created! Please sign in.');
+        setMode('login');
+        setLoading(false);
+        return;
+      }
+
+      // Update profile with extra info
+      await supabase.from('profiles').update({ phone, address, country }).eq('user_id', signInData.user.id);
+
+      await goAfterLogin(signInData.user.id);
     } else {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
       });
       if (error) {
         setError(error.message);
-      } else {
-        navigate(redirectTo, { replace: true });
+      } else if (data.user) {
+        await goAfterLogin(data.user.id);
       }
     }
     setLoading(false);
@@ -94,7 +135,7 @@ const Auth = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
       <div className="w-full max-w-md">
-        <div className="text-center mb-8">
+        <div className="text-center mb-6">
           <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-accent text-3xl mb-4">
             <ShieldCheck className="h-8 w-8 text-primary-foreground" />
           </div>
@@ -102,8 +143,30 @@ const Auth = () => {
             {mode === 'login' ? 'Welcome Back' : 'Create Account'}
           </h1>
           <p className="text-muted-foreground mt-1">
-            {mode === 'login' ? 'Sign in to access all features' : 'Fill in your details to get started'}
+            {mode === 'login' ? 'Sign in to continue' : 'Fill in your details to get started'}
           </p>
+        </div>
+
+        {/* Role selector */}
+        <div className="grid grid-cols-2 gap-2 mb-4 p-1 bg-muted rounded-xl">
+          <button
+            type="button"
+            onClick={() => setRole('client')}
+            className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all ${
+              role === 'client' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'
+            }`}
+          >
+            <Users className="h-4 w-4" /> Client
+          </button>
+          <button
+            type="button"
+            onClick={() => setRole('admin')}
+            className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all ${
+              role === 'admin' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'
+            }`}
+          >
+            <UserCog className="h-4 w-4" /> Admin
+          </button>
         </div>
 
         <div className="bg-card rounded-2xl border border-border p-8 shadow-lg max-h-[70vh] overflow-y-auto">
@@ -155,35 +218,39 @@ const Auth = () => {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number</Label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                    <Input id="phone" type="tel" placeholder="+91 9876543210" value={phone} onChange={e => setPhone(e.target.value)} className="pl-11" />
-                  </div>
-                </div>
+                {role === 'client' && (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Phone Number</Label>
+                      <div className="relative">
+                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                        <Input id="phone" type="tel" placeholder="+91 9876543210" value={phone} onChange={e => setPhone(e.target.value)} className="pl-11" />
+                      </div>
+                    </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="address">Address</Label>
-                  <div className="relative">
-                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                    <Input id="address" placeholder="Your address" value={address} onChange={e => setAddress(e.target.value)} className="pl-11" />
-                  </div>
-                </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="address">Address</Label>
+                      <div className="relative">
+                        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                        <Input id="address" placeholder="Your address" value={address} onChange={e => setAddress(e.target.value)} className="pl-11" />
+                      </div>
+                    </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="country">Country</Label>
-                  <div className="relative">
-                    <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                    <Input id="country" placeholder="India" value={country} onChange={e => setCountry(e.target.value)} className="pl-11" />
-                  </div>
-                </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="country">Country</Label>
+                      <div className="relative">
+                        <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                        <Input id="country" placeholder="India" value={country} onChange={e => setCountry(e.target.value)} className="pl-11" />
+                      </div>
+                    </div>
+                  </>
+                )}
               </>
             )}
 
             <Button type="submit" variant="hero" size="lg" className="w-full gap-2" disabled={loading}>
               {loading ? 'Please wait...' : (
-                <>{mode === 'login' ? 'Sign In' : 'Create Account'} <ArrowRight className="h-5 w-5" /></>
+                <>{mode === 'login' ? `Sign In as ${role === 'admin' ? 'Admin' : 'Client'}` : 'Create Account'} <ArrowRight className="h-5 w-5" /></>
               )}
             </Button>
           </form>
