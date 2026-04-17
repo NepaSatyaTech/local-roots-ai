@@ -172,7 +172,7 @@ const AdminDashboard = () => {
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
-  const handleLogout = async () => { await signOut(); navigate('/admin'); };
+  const handleLogout = async () => { await signOut(); navigate('/auth'); };
 
   const openReview = (product: { id: string; name: string; review_comment?: string | null }) => {
     setReviewingProduct({ id: product.id, name: product.name, comment: product.review_comment || '' });
