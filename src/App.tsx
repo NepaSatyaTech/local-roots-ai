@@ -34,6 +34,8 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/admin" element={<Navigate to="/auth" replace />} />
           <Route path="/auth" element={<Auth />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
 
           {/* Protected routes - require login */}
           <Route path="/about" element={<ProtectedRoute><About /></ProtectedRoute>} />
