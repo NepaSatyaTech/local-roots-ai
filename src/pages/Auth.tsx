@@ -43,10 +43,17 @@ const Auth = () => {
       if (data && data.length > 0) {
         navigate('/admin/dashboard', { replace: true });
       } else {
-        // Try to promote first user to admin. Use destructured response (no throw).
-        const { error: promoteError } = await supabase.functions.invoke('promote-admin');
-        // 403 (admin already exists) returns an error object — that's expected, just ignore it.
-        if (!promoteError) {
+        // Try to promote first user to admin. Wrap in try/catch — invoke throws
+        // FunctionsHttpError on non-2xx (e.g. 403 when an admin already exists).
+        let promoted = false;
+        try {
+          const { error: promoteError } = await supabase.functions.invoke('promote-admin');
+          promoted = !promoteError;
+        } catch {
+          // Expected when admin already exists — silently ignore.
+          promoted = false;
+        }
+        if (promoted) {
           const { data: again } = await supabase
             .from('user_roles')
             .select('role')
