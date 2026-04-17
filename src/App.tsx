@@ -15,8 +15,8 @@ import Scan from "./pages/Scan";
 import CommunityChat from "./pages/CommunityChat";
 import Auth from "./pages/Auth";
 import Support from "./pages/Support";
-import AdminLogin from "./pages/admin/AdminLogin";
 import AdminDashboard from "./pages/admin/AdminDashboard";
+import { Navigate } from "react-router-dom";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
