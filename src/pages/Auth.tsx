@@ -43,23 +43,22 @@ const Auth = () => {
       if (data && data.length > 0) {
         navigate('/admin/dashboard', { replace: true });
       } else {
-        // Try to promote first user to admin (silently ignore if admin already exists)
-        try {
-          await supabase.functions.invoke('promote-admin');
-        } catch {
-          // Ignore - means an admin already exists
+        // Try to promote first user to admin. Use destructured response (no throw).
+        const { error: promoteError } = await supabase.functions.invoke('promote-admin');
+        // 403 (admin already exists) returns an error object — that's expected, just ignore it.
+        if (!promoteError) {
+          const { data: again } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', userId)
+            .eq('role', 'admin');
+          if (again && again.length > 0) {
+            navigate('/admin/dashboard', { replace: true });
+            return;
+          }
         }
-        const { data: again } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', userId)
-          .eq('role', 'admin');
-        if (again && again.length > 0) {
-          navigate('/admin/dashboard', { replace: true });
-        } else {
-          setError('You do not have admin privileges. Please contact the administrator.');
-          await supabase.auth.signOut();
-        }
+        setError('You do not have admin privileges. Please contact the administrator.');
+        await supabase.auth.signOut();
       }
     } else {
       navigate(redirectTo, { replace: true });
