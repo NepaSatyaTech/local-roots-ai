@@ -14,6 +14,8 @@ import Chat from "./pages/Chat";
 import Scan from "./pages/Scan";
 import CommunityChat from "./pages/CommunityChat";
 import Auth from "./pages/Auth";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import Support from "./pages/Support";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import { Navigate } from "react-router-dom";
