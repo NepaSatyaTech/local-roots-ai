@@ -43,8 +43,12 @@ const Auth = () => {
       if (data && data.length > 0) {
         navigate('/admin/dashboard', { replace: true });
       } else {
-        // Try to promote first user to admin
-        await supabase.functions.invoke('promote-admin').catch(() => {});
+        // Try to promote first user to admin (silently ignore if admin already exists)
+        try {
+          await supabase.functions.invoke('promote-admin');
+        } catch {
+          // Ignore - means an admin already exists
+        }
         const { data: again } = await supabase
           .from('user_roles')
           .select('role')
