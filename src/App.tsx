@@ -30,7 +30,7 @@ const App = () => (
         <Routes>
           {/* Public routes */}
           <Route path="/" element={<Index />} />
-          <Route path="/admin" element={<AdminLogin />} />
+          <Route path="/admin" element={<Navigate to="/auth" replace />} />
           <Route path="/auth" element={<Auth />} />
 
           {/* Protected routes - require login */}
