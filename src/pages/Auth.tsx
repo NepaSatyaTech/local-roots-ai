@@ -253,6 +253,12 @@ const Auth = () => {
                 <>{mode === 'login' ? `Sign In as ${role === 'admin' ? 'Admin' : 'Client'}` : 'Create Account'} <ArrowRight className="h-5 w-5" /></>
               )}
             </Button>
+
+            {mode === 'login' && (
+              <p className="text-center text-sm">
+                <a href="/forgot-password" className="text-primary hover:underline">Forgot password?</a>
+              </p>
+            )}
           </form>
 
           <p className="mt-4 text-center text-sm text-muted-foreground">
