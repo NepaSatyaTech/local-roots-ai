@@ -103,6 +103,22 @@ const AdminDashboard = () => {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
   const { user, isAdmin, loading: authLoading, signOut } = useAuth();
+  const [adminUsername, setAdminUsername] = useState<string>('');
+
+  useEffect(() => {
+    if (!user) return;
+    import('@/integrations/supabase/client').then(({ supabase }) => {
+      supabase
+        .from('profiles')
+        .select('username')
+        .eq('user_id', user.id)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data?.username) setAdminUsername(data.username);
+          else if (user.email) setAdminUsername(user.email.split('@')[0]);
+        });
+    });
+  }, [user]);
   const {
     products, recentProducts, pendingProducts, approvedCount, reviewedCount,
     loading: productsLoading, addProduct, updateProduct, approveProduct, reviewProduct, deleteProduct,
