@@ -103,6 +103,22 @@ const AdminDashboard = () => {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
   const { user, isAdmin, loading: authLoading, signOut } = useAuth();
+  const [adminUsername, setAdminUsername] = useState<string>('');
+
+  useEffect(() => {
+    if (!user) return;
+    import('@/integrations/supabase/client').then(({ supabase }) => {
+      supabase
+        .from('profiles')
+        .select('username')
+        .eq('user_id', user.id)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data?.username) setAdminUsername(data.username);
+          else if (user.email) setAdminUsername(user.email.split('@')[0]);
+        });
+    });
+  }, [user]);
   const {
     products, recentProducts, pendingProducts, approvedCount, reviewedCount,
     loading: productsLoading, addProduct, updateProduct, approveProduct, reviewProduct, deleteProduct,
@@ -156,7 +172,7 @@ const AdminDashboard = () => {
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
-  const handleLogout = async () => { await signOut(); navigate('/admin'); };
+  const handleLogout = async () => { await signOut(); navigate('/auth'); };
 
   const openReview = (product: { id: string; name: string; review_comment?: string | null }) => {
     setReviewingProduct({ id: product.id, name: product.name, comment: product.review_comment || '' });
@@ -655,9 +671,18 @@ const AdminDashboard = () => {
               <p className="text-muted-foreground">Welcome back! Here's what's happening today.</p>
             </div>
             <div className="flex items-center gap-2">
+              {adminUsername && (
+                <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted">
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium text-foreground">Hi, {adminUsername}</span>
+                </div>
+              )}
               <Button variant="ghost" size="icon"><Bell className="h-5 w-5" /></Button>
               <Button variant="hero" className="gap-2" onClick={() => setAddDialogOpen(true)}>
                 <Plus className="h-5 w-5" />Add Product
+              </Button>
+              <Button variant="outline" className="gap-2" onClick={handleLogout}>
+                <LogOut className="h-5 w-5" /><span className="hidden sm:inline">Logout</span>
               </Button>
             </div>
           </div>

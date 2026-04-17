@@ -14,6 +14,8 @@ import Chat from "./pages/Chat";
 import Scan from "./pages/Scan";
 import CommunityChat from "./pages/CommunityChat";
 import Auth from "./pages/Auth";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import Support from "./pages/Support";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import { Navigate } from "react-router-dom";
@@ -32,6 +34,8 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/admin" element={<Navigate to="/auth" replace />} />
           <Route path="/auth" element={<Auth />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
 
           {/* Protected routes - require login */}
           <Route path="/about" element={<ProtectedRoute><About /></ProtectedRoute>} />
