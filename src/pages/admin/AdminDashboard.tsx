@@ -671,9 +671,18 @@ const AdminDashboard = () => {
               <p className="text-muted-foreground">Welcome back! Here's what's happening today.</p>
             </div>
             <div className="flex items-center gap-2">
+              {adminUsername && (
+                <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted">
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium text-foreground">Hi, {adminUsername}</span>
+                </div>
+              )}
               <Button variant="ghost" size="icon"><Bell className="h-5 w-5" /></Button>
               <Button variant="hero" className="gap-2" onClick={() => setAddDialogOpen(true)}>
                 <Plus className="h-5 w-5" />Add Product
+              </Button>
+              <Button variant="outline" className="gap-2" onClick={handleLogout}>
+                <LogOut className="h-5 w-5" /><span className="hidden sm:inline">Logout</span>
               </Button>
             </div>
           </div>
